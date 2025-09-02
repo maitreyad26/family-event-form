@@ -238,5 +238,5 @@ app.post('/delete', async (req, res) => {
 });
 
 // Start server
-const port = process.env.PORT || 1850; // Default to 3000 to avoid local conflicts
+const port = process.env.PORT; // Default to 3000 to avoid local conflicts
 app.listen(port, () => console.log(`Server running on http://localhost:${port}`));
