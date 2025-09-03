@@ -51,12 +51,14 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminpswd6885';
 // Save form data
 app.post('/save', async (req, res) => {
     try {
-        const { primary, family, familyMemberCount } = req.body || {};
-        if (!primary) throw new Error('No primary data provided');
+        const { primary, family = [] } = req.body || {};
+        if (!primary || !primary.email || !primary.name) {
+            throw new Error('Missing required primary data (email or name)');
+        }
         const submittedAt = new Date().toISOString();
-        const emailKey = primary.email?.toLowerCase();
+        const emailKey = primary.email.toLowerCase();
 
-        // Load edit counts with error handling
+        // Load edit counts
         let editCounts = {};
         if (fs.existsSync(editCountsFilePath)) {
             try {
@@ -73,8 +75,8 @@ app.post('/save', async (req, res) => {
         editCounts[emailKey] = editCount + 1;
         fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
 
-        // Prepare records
-        const records = [
+        // Prepare new records
+        const newRecords = [
             {
                 name: primary.name || 'N/A',
                 email: primary.email || 'N/A',
@@ -88,7 +90,7 @@ app.post('/save', async (req, res) => {
                 relation: 'Self (Primary)',
                 submittedAt
             },
-            ...(family || []).map(member => ({
+            ...family.slice(0, 10).map(member => ({
                 name: member.name || 'N/A',
                 email: primary.email || 'N/A',
                 dateOfEvent: member.dateOfEvent || '',
@@ -103,34 +105,8 @@ app.post('/save', async (req, res) => {
             }))
         ];
 
-        // Read existing data and filter duplicates
-        let allRecords = [];
-        if (fs.existsSync(csvFilePath)) {
-            try {
-                const csvData = fs.readFileSync(csvFilePath, 'utf8');
-                const lines = csvData.split('\n').filter(line => line.trim());
-                if (lines.length > 1) {
-                    for (let i = 1; i < lines.length; i++) {
-                        const values = parseCSVLine(lines[i]);
-                        if (values.length === csvHeaders.length) {
-                            const record = {};
-                            csvHeaders.forEach((header, index) => {
-                                record[header.id] = values[index] || 'N/A';
-                            });
-                            allRecords.push(record);
-                        }
-                    }
-                }
-            } catch (readErr) {
-                console.error('Error reading CSV:', readErr);
-            }
-        }
-        const uniqueRecords = allRecords.filter(existing =>
-            !(existing.email === primary.email && existing.submittedAt === submittedAt)
-        );
-        allRecords = [...uniqueRecords, ...records];
-
-        // Write to CSV
+        // Overwrite with unique records
+        let allRecords = newRecords;
         await csvWriter.writeRecords(allRecords).then(() =>
             res.json({ message: 'Data saved successfully!' })
         ).catch(err => {
@@ -138,7 +114,7 @@ app.post('/save', async (req, res) => {
         });
     } catch (error) {
         console.error('Save error:', error);
-        res.status(500).json({ message: 'Error saving data' });
+        res.status(500).json({ message: 'Error saving data: ' + error.message });
     }
 });
 
@@ -166,7 +142,7 @@ app.get('/admin', (req, res) => {
                         });
                         records.push(record);
                     } else {
-                        console.log(`Line ${i} skipped: length ${values.length} != ${csvHeaders.length}`);
+                        console.log(`Line ${i} skipped: length ${values.length} != ${csvHeaders.length}, values: ${values}`);
                     }
                 }
                 records.sort((a, b) => new Date(a['Date of Event']) - new Date(b['Date of Event']));
@@ -198,6 +174,7 @@ function parseCSVLine(line) {
     for (let i = 0; i < line.length; i++) {
         if (line[i] === '"' && (i === 0 || line[i - 1] !== '\\')) {
             inQuotes = !inQuotes;
+            if (!inQuotes && i + 1 < line.length && line[i + 1] === ',') i++; // Skip comma after closing quote
         } else if (line[i] === ',' && !inQuotes) {
             values.push(currentValue.trim());
             currentValue = '';
