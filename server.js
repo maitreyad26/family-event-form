@@ -153,20 +153,33 @@ app.get('/admin', (req, res) => {
         const records = [];
         if (fs.existsSync(csvFilePath)) {
             const csvData = fs.readFileSync(csvFilePath, 'utf8');
+            console.log('CSV content:', csvData); // Log raw content
             const lines = csvData.split('\n').filter(line => line.trim());
+            console.log('Number of lines:', lines.length);
             if (lines.length > 1) {
                 for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '')); // Simpler split
+                    const values = lines[i].split(',').map(v => v.trim());
+                    console.log(`Line ${i} values:`, values); // Log each line’s values
                     if (values.length === csvHeaders.length) {
                         const record = {};
                         csvHeaders.forEach((header, index) => {
-                            record[header.title] = values[index] || 'N/A';
+                            let value = values[index];
+                            if (value.startsWith('"') && value.endsWith('"')) {
+                                value = value.slice(1, -1).replace(/""/g, '"');
+                            }
+                            record[header.title] = value || 'N/A';
                         });
                         records.push(record);
+                    } else {
+                        console.log(`Line ${i} skipped: length ${values.length} != ${csvHeaders.length}`);
                     }
                 }
                 records.sort((a, b) => new Date(a['Date of Event']) - new Date(b['Date of Event']));
+            } else {
+                console.log('No data lines found after header');
             }
+        } else {
+            console.log('CSV file does not exist');
         }
         res.send(`
             <h1>Family Event Admin Data (Sorted by Date)</h1>
