@@ -28,16 +28,21 @@ const csvHeaders = [
     { id: 'submittedAt', title: 'Submitted At' }
 ];
 
-// Initialize CSV writer
-const csvWriter = createObjectCsvWriter({
-    path: csvFilePath,
-    header: csvHeaders
-});
-
-// Create CSV with headers if it doesn’t exist
-if (!fs.existsSync(csvFilePath)) {
-    csvWriter.writeRecords([]).then(() => console.log('CSV file created with headers'))
-        .catch(err => console.error('Error creating CSV:', err));
+// Initialize CSV writer with error handling
+let csvWriter;
+try {
+    csvWriter = createObjectCsvWriter({
+        path: csvFilePath,
+        header: csvHeaders,
+        append: false // Overwrite to ensure consistency, adjust if append is needed
+    });
+    if (!fs.existsSync(csvFilePath)) {
+        csvWriter.writeRecords([]).then(() => console.log('CSV file created with headers'))
+            .catch(err => console.error('Error creating CSV:', err));
+    }
+} catch (err) {
+    console.error('Error initializing CSV writer:', err);
+    process.exit(1); // Fail fast if CSV setup fails
 }
 
 // Initialize edit counts
@@ -51,10 +56,12 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminpswd6885';
 // Save form data
 app.post('/save', async (req, res) => {
     try {
-        const { primary, family, familyMemberCount } = req.body || {};
-        if (!primary) throw new Error('No primary data provided');
+        const { primary, family = [] } = req.body || {};
+        if (!primary || !primary.email || !primary.name) {
+            throw new Error('Missing required primary data (email or name)');
+        }
         const submittedAt = new Date().toISOString();
-        const emailKey = primary.email?.toLowerCase();
+        const emailKey = primary.email.toLowerCase();
 
         // Load edit counts with error handling
         let editCounts = {};
@@ -73,7 +80,7 @@ app.post('/save', async (req, res) => {
         editCounts[emailKey] = editCount + 1;
         fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
 
-        // Prepare records
+        // Prepare records with validation
         const records = [
             {
                 name: primary.name || 'N/A',
@@ -88,7 +95,7 @@ app.post('/save', async (req, res) => {
                 relation: 'Self (Primary)',
                 submittedAt
             },
-            ...(family || []).map(member => ({
+            ...family.slice(0, 10).map(member => ({
                 name: member.name || 'N/A',
                 email: primary.email || 'N/A',
                 dateOfEvent: member.dateOfEvent || '',
@@ -103,43 +110,15 @@ app.post('/save', async (req, res) => {
             }))
         ];
 
-        // Read existing data and filter duplicates
-        let allRecords = [];
-        if (fs.existsSync(csvFilePath)) {
-            try {
-                const csvData = fs.readFileSync(csvFilePath, 'utf8');
-                const lines = csvData.split('\n').filter(line => line.trim());
-                if (lines.length > 1) {
-                    for (let i = 1; i < lines.length; i++) {
-                        const values = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
-                        const cleanedValues = values.map(v => v.replace(/^"|"$/g, '').trim());
-                        if (cleanedValues.length === csvHeaders.length) {
-                            const record = {};
-                            csvHeaders.forEach((header, index) => {
-                                record[header.id] = cleanedValues[index] || 'N/A';
-                            });
-                            allRecords.push(record);
-                        }
-                    }
-                }
-            } catch (readErr) {
-                console.error('Error reading CSV:', readErr);
-            }
-        }
-        const uniqueRecords = allRecords.filter(existing =>
-            !(existing.email === primary.email && existing.submittedAt === submittedAt)
-        );
-        allRecords = [...uniqueRecords, ...records];
-
-        // Write to CSV
-        await csvWriter.writeRecords(allRecords).then(() =>
+        // Append new records directly
+        await csvWriter.writeRecords(records).then(() =>
             res.json({ message: 'Data saved successfully!' })
         ).catch(err => {
             throw new Error(`CSV write failed: ${err.message}`);
         });
     } catch (error) {
         console.error('Save error:', error);
-        res.status(500).json({ message: 'Error saving data' });
+        res.status(500).json({ message: 'Error saving data: ' + error.message });
     }
 });
 
@@ -153,28 +132,28 @@ app.get('/admin', (req, res) => {
         const records = [];
         if (fs.existsSync(csvFilePath)) {
             const csvData = fs.readFileSync(csvFilePath, 'utf8');
-            console.log('CSV content:', csvData); // Log raw content
+            console.log('CSV content:', csvData);
             const lines = csvData.split('\n').filter(line => line.trim());
             console.log('Number of lines:', lines.length);
             if (lines.length > 1) {
                 for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].split(',').map(v => v.trim());
-                    console.log(`Line ${i} values:`, values); // Log each line’s values
+                    const values = parseCSVLine(lines[i]);
+                    console.log(`Line ${i} values:`, values);
                     if (values.length === csvHeaders.length) {
                         const record = {};
                         csvHeaders.forEach((header, index) => {
-                            let value = values[index];
-                            if (value.startsWith('"') && value.endsWith('"')) {
-                                value = value.slice(1, -1).replace(/""/g, '"');
-                            }
-                            record[header.title] = value || 'N/A';
+                            record[header.title] = values[index] || 'N/A';
                         });
                         records.push(record);
                     } else {
                         console.log(`Line ${i} skipped: length ${values.length} != ${csvHeaders.length}`);
                     }
                 }
-                records.sort((a, b) => new Date(a['Date of Event']) - new Date(b['Date of Event']));
+                records.sort((a, b) => {
+                    const dateA = new Date(a['Date of Event'] || '1970-01-01');
+                    const dateB = new Date(b['Date of Event'] || '1970-01-01');
+                    return dateA - dateB;
+                });
             } else {
                 console.log('No data lines found after header');
             }
@@ -194,6 +173,26 @@ app.get('/admin', (req, res) => {
         res.status(500).send('Error fetching data: ' + error.message);
     }
 });
+
+// Custom CSV line parser
+function parseCSVLine(line) {
+    const values = [];
+    let inQuotes = false;
+    let currentValue = '';
+    for (let i = 0; i < line.length; i++) {
+        if (line[i] === '"' && (i === 0 || line[i - 1] !== '\\')) {
+            inQuotes = !inQuotes;
+            if (!inQuotes && i + 1 < line.length && line[i + 1] === ',') i++; // Skip comma after closing quote
+        } else if (line[i] === ',' && !inQuotes) {
+            values.push(currentValue.trim());
+            currentValue = '';
+        } else {
+            currentValue += line[i];
+        }
+    }
+    values.push(currentValue.trim());
+    return values.map(v => v.startsWith('"') && v.endsWith('"') ? v.slice(1, -1).replace(/""/g, '"') : v);
+}
 
 // Edit count
 app.get('/edit-count/:email', (req, res) => {
@@ -221,12 +220,11 @@ app.post('/delete', async (req, res) => {
                 const lines = csvData.split('\n').filter(line => line.trim());
                 if (lines.length > 1) {
                     for (let i = 1; i < lines.length; i++) {
-                        const values = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
-                        const cleanedValues = values.map(v => v.replace(/^"|"$/g, '').trim());
-                        if (cleanedValues.length === csvHeaders.length) {
+                        const values = parseCSVLine(lines[i]);
+                        if (values.length === csvHeaders.length) {
                             const record = {};
                             csvHeaders.forEach((header, index) => {
-                                record[header.id] = cleanedValues[index];
+                                record[header.id] = values[index];
                             });
                             if (record.email.toLowerCase() !== email?.toLowerCase()) {
                                 records.push(record);
@@ -250,5 +248,5 @@ app.post('/delete', async (req, res) => {
 });
 
 // Start server
-const port = process.env.PORT; // Remove misleading comment about 3000
+const port = process.env.PORT;
 app.listen(port, () => console.log(`Server running on http://localhost:${port}`));
