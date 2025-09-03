@@ -156,12 +156,11 @@ app.get('/admin', (req, res) => {
             const lines = csvData.split('\n').filter(line => line.trim());
             if (lines.length > 1) {
                 for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
-                    const cleanedValues = values.map(v => v.replace(/^"|"$/g, '').trim());
-                    if (cleanedValues.length === csvHeaders.length) {
+                    const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '')); // Simpler split
+                    if (values.length === csvHeaders.length) {
                         const record = {};
                         csvHeaders.forEach((header, index) => {
-                            record[header.title] = cleanedValues[index] || 'N/A';
+                            record[header.title] = values[index] || 'N/A';
                         });
                         records.push(record);
                     }
@@ -179,7 +178,7 @@ app.get('/admin', (req, res) => {
         `);
     } catch (error) {
         console.error('Admin error:', error);
-        res.status(500).send('Error fetching data');
+        res.status(500).send('Error fetching data: ' + error.message);
     }
 });
 
@@ -238,5 +237,5 @@ app.post('/delete', async (req, res) => {
 });
 
 // Start server
-const port = process.env.PORT; // Default to 3000 to avoid local conflicts
+const port = process.env.PORT; // Remove misleading comment about 3000
 app.listen(port, () => console.log(`Server running on http://localhost:${port}`));
