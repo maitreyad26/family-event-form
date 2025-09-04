@@ -45,7 +45,31 @@ if (!fs.existsSync(editCountsFilePath)) {
     fs.writeFileSync(editCountsFilePath, JSON.stringify({}), 'utf8');
 }
 
-// Admin password from environment
+// In-memory storage for admin
+let adminData = [];
+if (fs.existsSync(csvFilePath)) {
+    try {
+        const csvData = fs.readFileSync(csvFilePath, 'utf8');
+        const lines = csvData.split('\n').filter(line => line.trim());
+        if (lines.length > 1) {
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length === csvHeaders.length) {
+                    const record = {};
+                    csvHeaders.forEach((header, index) => {
+                        record[header.title] = values[index] || 'N/A';
+                    });
+                    adminData.push(record);
+                }
+            }
+            adminData.sort((a, b) => new Date(a['Date of Event']) - new Date(b['Date of Event']));
+        }
+    } catch (err) {
+        console.error('Error loading initial admin data:', err);
+    }
+}
+
+// Admin password
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminpswd6885';
 
 // Save form data
@@ -105,10 +129,13 @@ app.post('/save', async (req, res) => {
             }))
         ];
 
-        // Overwrite with unique records
-        let allRecords = newRecords;
-        await csvWriter.writeRecords(allRecords).then(() =>
-            res.json({ message: 'Data saved successfully!' })
+        // Update in-memory storage
+        adminData = [...adminData.filter(r => r.email !== primary.email || r.submittedAt !== submittedAt), ...newRecords];
+        adminData.sort((a, b) => new Date(a['Date of Event']) - new Date(b['Date of Event']));
+
+        // Write to CSV
+        await csvWriter.writeRecords(newRecords).then(() =>
+            res.json({ message: 'Data saved to CSV and admin successfully!' })
         ).catch(err => {
             throw new Error(`CSV write failed: ${err.message}`);
         });
@@ -118,45 +145,18 @@ app.post('/save', async (req, res) => {
     }
 });
 
-// Admin view (sorted by Date of Event)
+// Admin view (direct from in-memory)
 app.get('/admin', (req, res) => {
     const password = req.query.password;
     if (password !== ADMIN_PASSWORD) {
         return res.status(401).send('Unauthorized');
     }
     try {
-        const records = [];
-        if (fs.existsSync(csvFilePath)) {
-            const csvData = fs.readFileSync(csvFilePath, 'utf8');
-            console.log('CSV content:', csvData);
-            const lines = csvData.split('\n').filter(line => line.trim());
-            console.log('Number of lines:', lines.length);
-            if (lines.length > 1) {
-                for (let i = 1; i < lines.length; i++) {
-                    const values = parseCSVLine(lines[i]);
-                    console.log(`Line ${i} values:`, values);
-                    if (values.length === csvHeaders.length) {
-                        const record = {};
-                        csvHeaders.forEach((header, index) => {
-                            record[header.title] = values[index] || 'N/A';
-                        });
-                        records.push(record);
-                    } else {
-                        console.log(`Line ${i} skipped: length ${values.length} != ${csvHeaders.length}, values: ${values}`);
-                    }
-                }
-                records.sort((a, b) => new Date(a['Date of Event']) - new Date(b['Date of Event']));
-            } else {
-                console.log('No data lines found after header');
-            }
-        } else {
-            console.log('CSV file does not exist');
-        }
         res.send(`
             <h1>Family Event Admin Data (Sorted by Date)</h1>
             <table border="1">
                 <thead><tr>${csvHeaders.map(h => `<th>${h.title}</th>`).join('')}</tr></thead>
-                <tbody>${records.length ? records.map(r => `<tr>${csvHeaders.map(h => `<td>${r[h.title]}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="' + csvHeaders.length + '">No data</td></tr>'}</tbody>
+                <tbody>${adminData.length ? adminData.map(r => `<tr>${csvHeaders.map(h => `<td>${r[h.title]}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="' + csvHeaders.length + '">No data</td></tr>'}</tbody>
             </table>
             <p><a href="/family_form.html">Back to Form</a></p>
         `);
@@ -166,7 +166,7 @@ app.get('/admin', (req, res) => {
     }
 });
 
-// Custom CSV line parser
+// Custom CSV line parser (for initial load)
 function parseCSVLine(line) {
     const values = [];
     let inQuotes = false;
@@ -205,30 +205,8 @@ app.post('/delete', async (req, res) => {
         if (!password || password !== ADMIN_PASSWORD) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
-        let records = [];
-        if (fs.existsSync(csvFilePath)) {
-            try {
-                const csvData = fs.readFileSync(csvFilePath, 'utf8');
-                const lines = csvData.split('\n').filter(line => line.trim());
-                if (lines.length > 1) {
-                    for (let i = 1; i < lines.length; i++) {
-                        const values = parseCSVLine(lines[i]);
-                        if (values.length === csvHeaders.length) {
-                            const record = {};
-                            csvHeaders.forEach((header, index) => {
-                                record[header.id] = values[index];
-                            });
-                            if (record.email.toLowerCase() !== email?.toLowerCase()) {
-                                records.push(record);
-                            }
-                        }
-                    }
-                }
-            } catch (readErr) {
-                console.error('Error reading CSV:', readErr);
-            }
-        }
-        await csvWriter.writeRecords(records).then(() =>
+        adminData = adminData.filter(r => r.email.toLowerCase() !== email?.toLowerCase());
+        await csvWriter.writeRecords(adminData).then(() =>
             res.json({ message: 'Data deleted successfully!' })
         ).catch(err => {
             throw new Error(`CSV write failed: ${err.message}`);
