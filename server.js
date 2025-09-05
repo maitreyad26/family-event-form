@@ -64,6 +64,7 @@ function loadInitialData() {
                     }
                 }
                 adminData.sort((a, b) => new Date(a['Date of Event'] || '1970-01-01') - new Date(b['Date of Event'] || '1970-01-01'));
+                console.log('Initial adminData loaded:', adminData);
             }
         } catch (err) {
             console.error('Error loading initial data:', err);
@@ -118,21 +119,20 @@ app.post('/save', async (req, res) => {
 
         // Prepare new records
         const newRecords = [
-            Object.fromEntries(csvHeaders.map(h => [h.title, primary[h.id] || 'N/A'])).concat({
-                'Relation to Primary': 'Self (Primary)',
-                'Submitted At': submittedAt
-            }),
-            ...family.slice(0, 10).map(member => Object.fromEntries(csvHeaders.map(h => [h.title, member[h.id] || 'N/A'])).concat({
-                'Relation to Primary': member.relation || 'N/A',
-                'Submitted At': submittedAt
-            }))
+            { ...Object.fromEntries(csvHeaders.map(h => [h.title, primary[h.id] || 'N/A'])), 
+              'Relation to Primary': 'Self (Primary)', 
+              'Submitted At': submittedAt },
+            ...family.slice(0, 10).map(member => ({ ...Object.fromEntries(csvHeaders.map(h => [h.title, member[h.id] || 'N/A'])), 
+              'Relation to Primary': member.relation || 'N/A', 
+              'Submitted At': submittedAt }))
         ];
 
         // Update in-memory and CSV
         adminData = [...adminData.filter(r => r.email !== primary.email || r['Submitted At'] !== submittedAt), ...newRecords];
         adminData.sort((a, b) => new Date(a['Date of Event'] || '1970-01-01') - new Date(b['Date of Event'] || '1970-01-01'));
+        console.log('New adminData:', adminData);
         await csvWriter.writeRecords(newRecords).then(() => {
-            console.log('Data saved:', newRecords);
+            console.log('Data saved to CSV:', newRecords);
             res.json({ message: 'Data saved to CSV and admin successfully!' });
         }).catch(err => {
             throw new Error(`CSV write failed: ${err.message}`);
@@ -197,5 +197,5 @@ app.post('/delete', async (req, res) => {
 });
 
 // Start server
-const port = process.env.PORT || 10000; // Use dynamic port with fallback
+const port = process.env.PORT || 10000;
 app.listen(port, () => console.log(`Server running on http://localhost:${port}`));
