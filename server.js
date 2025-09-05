@@ -99,7 +99,7 @@ app.post('/save', async (req, res) => {
         editCounts[emailKey] = editCount + 1;
         fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
 
-        // Prepare new records
+        // Prepare new records with logging
         const newRecords = [
             {
                 name: primary.name || 'N/A',
@@ -128,15 +128,18 @@ app.post('/save', async (req, res) => {
                 submittedAt
             }))
         ];
+        console.log('New records prepared:', newRecords);
 
         // Update in-memory storage
         adminData = [...adminData.filter(r => r.email !== primary.email || r.submittedAt !== submittedAt), ...newRecords];
+        console.log('Updated adminData:', adminData);
         adminData.sort((a, b) => new Date(a['Date of Event']) - new Date(b['Date of Event']));
 
         // Write to CSV
-        await csvWriter.writeRecords(newRecords).then(() =>
-            res.json({ message: 'Data saved to CSV and admin successfully!' })
-        ).catch(err => {
+        await csvWriter.writeRecords(newRecords).then(() => {
+            console.log('Records written to CSV:', newRecords);
+            res.json({ message: 'Data saved to CSV and admin successfully!' });
+        }).catch(err => {
             throw new Error(`CSV write failed: ${err.message}`);
         });
     } catch (error) {
@@ -152,11 +155,12 @@ app.get('/admin', (req, res) => {
         return res.status(401).send('Unauthorized');
     }
     try {
+        console.log('Current adminData:', adminData);
         res.send(`
             <h1>Family Event Admin Data (Sorted by Date)</h1>
             <table border="1">
                 <thead><tr>${csvHeaders.map(h => `<th>${h.title}</th>`).join('')}</tr></thead>
-                <tbody>${adminData.length ? adminData.map(r => `<tr>${csvHeaders.map(h => `<td>${r[h.title]}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="' + csvHeaders.length + '">No data</td></tr>'}</tbody>
+                <tbody>${adminData.length ? adminData.map(r => `<tr>${csvHeaders.map(h => `<td>${r[h.title] || 'N/A'}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="' + csvHeaders.length + '">No data</td></tr>'}</tbody>
             </table>
             <p><a href="/family_form.html">Back to Form</a></p>
         `);
