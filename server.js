@@ -138,7 +138,8 @@ app.get('/admin', async (req, res) => {
     }
     try {
         const collection = await connectDB();
-        const records = await collection.find({}).sort({ dateOfEvent: 1 }).toArray();
+        const records = await collection.find({}).toArray();
+        records.sort((a, b) => new Date(a.dateOfEvent) - new Date(b.dateOfEvent));
         res.send(`
             <h1>Family Event Admin Data (Sorted by Date)</h1>
             <table border="1">
