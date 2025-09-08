@@ -16,9 +16,7 @@ const editCountsFilePath = path.join(__dirname, 'edit_counts.json');
 
 // MongoDB URI from environment
 const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri, {
-  serverApi: { version: '1', strict: true, deprecationErrors: true }
-});
+const client = new MongoClient(uri, { serverApi: { version: '1', strict: true, deprecationErrors: true } });
 
 // CSV headers for backup
 const csvHeaders = [
@@ -138,8 +136,7 @@ app.get('/admin', async (req, res) => {
     }
     try {
         const collection = await connectDB();
-        const records = await collection.find({}).toArray();
-        records.sort((a, b) => new Date(a.dateOfEvent) - new Date(b.dateOfEvent));
+        const records = await collection.find({}).sort({ dateOfEvent: 1 }).toArray();
         res.send(`
             <h1>Family Event Admin Data (Sorted by Date)</h1>
             <table border="1">
