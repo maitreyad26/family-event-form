@@ -41,8 +41,7 @@ const csvWriter = createObjectCsvWriter({
 
 // Initialize files if not exist
 if (!fs.existsSync(csvFilePath)) {
-    csvWriter.writeRecords([]).then(() => console.log('CSV file created with headers'))
-        .catch(err => console.error('Error creating CSV:', err));
+    csvWriter.writeRecords([]).catch(err => console.error('Error creating CSV:', err));
 }
 if (!fs.existsSync(editCountsFilePath)) {
     fs.writeFileSync(editCountsFilePath, JSON.stringify({}), 'utf8');
@@ -68,15 +67,20 @@ app.post('/save', async (req, res) => {
     try {
         const { primary, family = [] } = req.body || {};
         if (!primary || !primary.email || !primary.name) {
-            throw new Error('Missing required primary data');
+            return res.status(400).json({ message: 'Missing required primary data (name or email)' });
         }
         const submittedAt = new Date().toISOString();
         const emailKey = primary.email.toLowerCase();
 
         // Load and update edit counts
         let editCounts = {};
-        if (fs.existsSync(editCountsFilePath)) {
-            editCounts = JSON.parse(fs.readFileSync(editCountsFilePath, 'utf8')) || {};
+        try {
+            if (fs.existsSync(editCountsFilePath)) {
+                editCounts = JSON.parse(fs.readFileSync(editCountsFilePath, 'utf8')) || {};
+            }
+        } catch (e) {
+            console.error('Error reading edit_counts.json:', e);
+            editCounts = {}; // Reset if corrupted
         }
         const editCount = editCounts[emailKey] || 0;
         if (editCount >= 3) {
@@ -117,33 +121,31 @@ app.post('/save', async (req, res) => {
         if (editCount > 0) {
             const latestSubmission = await collection.find({ email: primary.email.toLowerCase() })
                 .sort({ submittedAt: -1 })
-                .limit(1)
+                .limit(1 + family.length) // Include primary + family
                 .toArray();
             if (latestSubmission.length > 0) {
-                const latestIds = latestSubmission[0].relation === 'Self (Primary)' 
-                    ? [latestSubmission[0]._id, ...family.map(() => latestSubmission[0]._id)] // Simple update for now, adjust if family IDs differ
-                    : latestSubmission.map(doc => doc._id);
+                const latestIds = latestSubmission.map(doc => doc._id);
                 await collection.updateMany(
                     { _id: { $in: latestIds } },
                     { $set: { ...updatedRecords[0], submittedAt } },
                     { multi: true }
                 );
                 editCounts[emailKey] = editCount + 1;
-                fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
             } else {
                 await collection.insertMany(updatedRecords, { ordered: false });
                 editCounts[emailKey] = 1;
-                fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
             }
         } else {
             await collection.insertMany(updatedRecords, { ordered: false });
             editCounts[emailKey] = 1;
-            fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
         }
+
+        // Save edit counts
+        fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
 
         // Sync CSV: Rewrite with all current MongoDB records
         const allRecords = await collection.find({}).toArray();
-        await csvWriter.writeRecords(allRecords).then(() => console.log('Data backed up to CSV'));
+        await csvWriter.writeRecords(allRecords).catch(err => console.error('CSV write error:', err));
 
         res.json({ message: 'Data saved to database and CSV successfully!' });
     } catch (error) {
@@ -152,7 +154,7 @@ app.post('/save', async (req, res) => {
     }
 });
 
-// Admin view (with search and custom sort)
+// Admin view (show all data by default, optional month/year filter)
 app.get('/admin', async (req, res) => {
     const password = req.query.password;
     if (password !== ADMIN_PASSWORD) {
@@ -162,10 +164,11 @@ app.get('/admin', async (req, res) => {
     const year = req.query.year;
     let query = {};
     let searchTitle = '';
-    if (month && year) {
-        const paddedMonth = month.padStart(2, '0');
+    // Apply filter only if both month and year are provided and valid
+    if (month && year && !isNaN(month) && !isNaN(year) && month >= 1 && month <= 12) {
+        const paddedMonth = String(month).padStart(2, '0');
         query.dateOfEvent = { $regex: `^${year}-${paddedMonth}-` };
-        searchTitle = ` (Showing results for ${month}/${year})`;
+        searchTitle = ` (Filtered for ${month}/${year})`;
     }
     try {
         const collection = await connectDB();
@@ -175,9 +178,9 @@ app.get('/admin', async (req, res) => {
         records.sort((a, b) => {
             const dateA = a.dateOfEvent ? new Date(a.dateOfEvent) : new Date(0);
             const dateB = b.dateOfEvent ? new Date(b.dateOfEvent) : new Date(0);
-            if (isNaN(dateA.getTime())) dateA = new Date(0);
-            if (isNaN(dateB.getTime())) dateB = new Date(0);
-
+            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+                return isNaN(dateA.getTime()) ? -1 : 1; // Invalid dates to top
+            }
             if (dateA.getMonth() !== dateB.getMonth()) return dateA.getMonth() - dateB.getMonth();
             if (dateA.getDate() !== dateB.getDate()) return dateA.getDate() - dateB.getDate();
             if (dateA.getFullYear() !== dateB.getFullYear()) return dateA.getFullYear() - dateB.getFullYear();
@@ -200,7 +203,7 @@ app.get('/admin', async (req, res) => {
         `);
     } catch (error) {
         console.error('Admin error:', error);
-        res.status(500).send('Error fetching data: ' + error.message);
+        res.status(500).send('Error fetching data: ' + (error.message || 'Unknown error'));
     }
 });
 
@@ -228,7 +231,7 @@ app.post('/delete', async (req, res) => {
 
         // Sync CSV: Rewrite with remaining MongoDB records
         const allRecords = await collection.find({}).toArray();
-        await csvWriter.writeRecords(allRecords).then(() => console.log('CSV updated after deletion'));
+        await csvWriter.writeRecords(allRecords).catch(err => console.error('CSV write error:', err));
 
         // Reset edit count
         let editCounts = JSON.parse(fs.readFileSync(editCountsFilePath, 'utf8')) || {};
