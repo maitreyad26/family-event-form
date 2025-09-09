@@ -63,7 +63,7 @@ async function connectDB() {
     }
 }
 
-// Save form data
+// Save form data (with true editing on resubmit)
 app.post('/save', async (req, res) => {
     try {
         const { primary, family = [] } = req.body || {};
@@ -82,11 +82,9 @@ app.post('/save', async (req, res) => {
         if (editCount >= 3) {
             return res.status(400).json({ message: 'Edit limit of 3 reached' });
         }
-        editCounts[emailKey] = editCount + 1;
-        fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
 
-        // Prepare records for MongoDB and CSV
-        const newRecords = [
+        const collection = await connectDB();
+        let updatedRecords = [
             {
                 name: primary.name || 'N/A',
                 email: primary.email || 'N/A',
@@ -100,9 +98,9 @@ app.post('/save', async (req, res) => {
                 relation: 'Self (Primary)',
                 submittedAt
             },
-            ...family.map(member => ({
+            ...family.map((member, index) => ({
                 name: member.name || 'N/A',
-                email: primary.email || 'N/A', // Self's email included
+                email: primary.email || 'N/A',
                 dateOfEvent: member.dateOfEvent || '',
                 eventDescription: member.eventDescription || '',
                 gotra: member.gotra || 'N/A',
@@ -110,17 +108,43 @@ app.post('/save', async (req, res) => {
                 rashi: member.rashi || 'N/A',
                 phone: member.phone || 'N/A',
                 address: member.address || '',
-                relation: member.relation || 'N/A',
+                relation: member.relation || (index === 0 ? 'Spouse' : `Family Member ${index + 1}`),
                 submittedAt
             }))
         ];
 
-        // Save to MongoDB
-        const collection = await connectDB();
-        await collection.insertMany(newRecords, { ordered: false });
+        // If editCount > 0, update the most recent submission
+        if (editCount > 0) {
+            const latestSubmission = await collection.find({ email: primary.email.toLowerCase() })
+                .sort({ submittedAt: -1 })
+                .limit(1)
+                .toArray();
+            if (latestSubmission.length > 0) {
+                const latestIds = latestSubmission[0].relation === 'Self (Primary)' 
+                    ? [latestSubmission[0]._id, ...family.map(() => latestSubmission[0]._id)] // Simple update for now, adjust if family IDs differ
+                    : latestSubmission.map(doc => doc._id);
+                await collection.updateMany(
+                    { _id: { $in: latestIds } },
+                    { $set: { ...updatedRecords[0], submittedAt } },
+                    { multi: true }
+                );
+                editCounts[emailKey] = editCount + 1;
+                fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
+            } else {
+                await collection.insertMany(updatedRecords, { ordered: false });
+                editCounts[emailKey] = 1;
+                fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
+            }
+        } else {
+            await collection.insertMany(updatedRecords, { ordered: false });
+            editCounts[emailKey] = 1;
+            fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
+        }
 
-        // Save to CSV as backup
-        await csvWriter.writeRecords(newRecords).then(() => console.log('Data backed up to CSV'));
+        // Sync CSV: Rewrite with all current MongoDB records
+        const allRecords = await collection.find({}).toArray();
+        await csvWriter.writeRecords(allRecords).then(() => console.log('Data backed up to CSV'));
+
         res.json({ message: 'Data saved to database and CSV successfully!' });
     } catch (error) {
         console.error('Save error:', error);
@@ -128,17 +152,46 @@ app.post('/save', async (req, res) => {
     }
 });
 
-// Admin view (sorted by Date of Event)
+// Admin view (with search and custom sort)
 app.get('/admin', async (req, res) => {
     const password = req.query.password;
     if (password !== ADMIN_PASSWORD) {
         return res.status(401).send('Unauthorized');
     }
+    const month = req.query.month;
+    const year = req.query.year;
+    let query = {};
+    let searchTitle = '';
+    if (month && year) {
+        const paddedMonth = month.padStart(2, '0');
+        query.dateOfEvent = { $regex: `^${year}-${paddedMonth}-` };
+        searchTitle = ` (Showing results for ${month}/${year})`;
+    }
     try {
         const collection = await connectDB();
-        const records = await collection.find({}).sort({ dateOfEvent: 1 }).toArray();
+        let records = await collection.find(query).toArray();
+
+        // Custom sort: Prioritize month (Jan-Dec), then day, then year asc, then name asc if same date
+        records.sort((a, b) => {
+            const dateA = a.dateOfEvent ? new Date(a.dateOfEvent) : new Date(0);
+            const dateB = b.dateOfEvent ? new Date(b.dateOfEvent) : new Date(0);
+            if (isNaN(dateA.getTime())) dateA = new Date(0);
+            if (isNaN(dateB.getTime())) dateB = new Date(0);
+
+            if (dateA.getMonth() !== dateB.getMonth()) return dateA.getMonth() - dateB.getMonth();
+            if (dateA.getDate() !== dateB.getDate()) return dateA.getDate() - dateB.getDate();
+            if (dateA.getFullYear() !== dateB.getFullYear()) return dateA.getFullYear() - dateB.getFullYear();
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
         res.send(`
-            <h1>Family Event Admin Data (Sorted by Date)</h1>
+            <h1>Family Event Admin Data (Sorted by Date)${searchTitle}</h1>
+            <form method="get" action="/admin">
+                <input type="hidden" name="password" value="${password}">
+                <label>Month (1-12):</label> <input name="month" type="number" min="1" max="12" value="${month || ''}">
+                <label>Year (e.g., 2025):</label> <input name="year" type="number" value="${year || ''}">
+                <button type="submit">Search by Date of Event</button>
+            </form>
             <table border="1">
                 <thead><tr>${csvHeaders.map(h => `<th>${h.title}</th>`).join('')}</tr></thead>
                 <tbody>${records.length ? records.map(r => `<tr>${csvHeaders.map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="' + csvHeaders.length + '">No data</td></tr>'}</tbody>
@@ -163,7 +216,7 @@ app.get('/edit-count/:email', (req, res) => {
     }
 });
 
-// Delete by email
+// Delete by email (with CSV sync and edit count reset)
 app.post('/delete', async (req, res) => {
     try {
         const { password, email } = req.body || {};
@@ -172,11 +225,35 @@ app.post('/delete', async (req, res) => {
         }
         const collection = await connectDB();
         await collection.deleteMany({ email: email.toLowerCase() });
+
+        // Sync CSV: Rewrite with remaining MongoDB records
+        const allRecords = await collection.find({}).toArray();
+        await csvWriter.writeRecords(allRecords).then(() => console.log('CSV updated after deletion'));
+
+        // Reset edit count
+        let editCounts = JSON.parse(fs.readFileSync(editCountsFilePath, 'utf8')) || {};
+        delete editCounts[email.toLowerCase()];
+        fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
+
         res.json({ message: 'Data deleted successfully!' });
     } catch (error) {
         console.error('Delete error:', error);
         res.status(500).json({ message: 'Error deleting data' });
     }
+});
+
+// Download CSV (for backup verification)
+app.get('/download-csv', (req, res) => {
+    const password = req.query.password;
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(401).send('Unauthorized');
+    }
+    res.download(csvFilePath, 'family_event_data.csv', (err) => {
+        if (err) {
+            console.error('CSV download error:', err);
+            res.status(500).send('Error downloading CSV');
+        }
+    });
 });
 
 // Start server with MongoDB connection cleanup
