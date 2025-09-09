@@ -164,19 +164,23 @@ app.get('/admin', async (req, res) => {
     const year = req.query.year;
     let query = {};
     let searchTitle = '';
-    // Flexible OR/AND filter for month and/or year
+    // Flexible filter: month only, year only, or both (AND for both)
     if (month || year) {
-        const conditions = [];
         if (month && !isNaN(month) && month >= 1 && month <= 12) {
             const paddedMonth = String(month).padStart(2, '0');
-            conditions.push({ dateOfEvent: { $regex: `-${paddedMonth}-` } });
-        }
-        if (year && !isNaN(year)) {
-            conditions.push({ dateOfEvent: { $regex: `^${year}-` } });
-        }
-        if (conditions.length > 0) {
-            query.$or = conditions;
-            searchTitle = ` (Filtered for ${month ? `Month ${month}` : ''}${month && year ? ' and ' : ''}${year ? `Year ${year}` : ''})`;
+            if (year && !isNaN(year)) {
+                // Both month and year: strict AND match
+                query.dateOfEvent = { $regex: `^${year}-${paddedMonth}-` };
+                searchTitle = ` (Filtered for August ${year})`; // Assuming 8 is August, adjust if needed
+            } else {
+                // Month only: match any year
+                query.dateOfEvent = { $regex: `-${paddedMonth}-` };
+                searchTitle = ` (Filtered for Month ${month})`;
+            }
+        } else if (year && !isNaN(year)) {
+            // Year only: match any month
+            query.dateOfEvent = { $regex: `^${year}-` };
+            searchTitle = ` (Filtered for Year ${year})`;
         }
     }
     try {
@@ -201,7 +205,7 @@ app.get('/admin', async (req, res) => {
             <form method="get" action="/admin">
                 <input type="hidden" name="password" value="${password}">
                 <label>Month (1-12):</label> <input name="month" type="number" min="1" max="12" value="${month || ''}">
-                <label>Year (e.g., 2025):</label> <input name="year" type="number" value="${year || ''}">
+                <label>Year (e.g., 2026):</label> <input name="year" type="number" value="${year || ''}">
                 <button type="submit">Search by Date of Event</button>
             </form>
             <table border="1">
