@@ -154,7 +154,7 @@ app.post('/save', async (req, res) => {
     }
 });
 
-// Admin view (show all data by default, optional month/year filter)
+// Admin view (show all data by default, flexible month/year filter)
 app.get('/admin', async (req, res) => {
     const password = req.query.password;
     if (password !== ADMIN_PASSWORD) {
@@ -164,11 +164,20 @@ app.get('/admin', async (req, res) => {
     const year = req.query.year;
     let query = {};
     let searchTitle = '';
-    // Apply filter only if both month and year are provided and valid
-    if (month && year && !isNaN(month) && !isNaN(year) && month >= 1 && month <= 12) {
-        const paddedMonth = String(month).padStart(2, '0');
-        query.dateOfEvent = { $regex: `^${year}-${paddedMonth}-` };
-        searchTitle = ` (Filtered for ${month}/${year})`;
+    // Flexible OR/AND filter for month and/or year
+    if (month || year) {
+        const conditions = [];
+        if (month && !isNaN(month) && month >= 1 && month <= 12) {
+            const paddedMonth = String(month).padStart(2, '0');
+            conditions.push({ dateOfEvent: { $regex: `-${paddedMonth}-` } });
+        }
+        if (year && !isNaN(year)) {
+            conditions.push({ dateOfEvent: { $regex: `^${year}-` } });
+        }
+        if (conditions.length > 0) {
+            query.$or = conditions;
+            searchTitle = ` (Filtered for ${month ? `Month ${month}` : ''}${month && year ? ' and ' : ''}${year ? `Year ${year}` : ''})`;
+        }
     }
     try {
         const collection = await connectDB();
