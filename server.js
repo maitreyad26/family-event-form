@@ -171,7 +171,7 @@ app.get('/admin', async (req, res) => {
             if (year && !isNaN(year)) {
                 // Both month and year: strict AND match
                 query.dateOfEvent = { $regex: `^${year}-${paddedMonth}-` };
-                searchTitle = ` (Filtered for August ${year})`; // Assuming 8 is August, adjust if needed
+                searchTitle = ` (Filtered for ${month}/${year})`;
             } else {
                 // Month only: match any year
                 query.dateOfEvent = { $regex: `-${paddedMonth}-` };
@@ -209,8 +209,22 @@ app.get('/admin', async (req, res) => {
                 <button type="submit">Search by Date of Event</button>
             </form>
             <table border="1">
-                <thead><tr>${csvHeaders.map(h => `<th>${h.title}</th>`).join('')}</tr></thead>
-                <tbody>${records.length ? records.map(r => `<tr>${csvHeaders.map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="' + csvHeaders.length + '">No data</td></tr>'}</tbody>
+                <thead><tr>
+                    ${csvHeaders.slice(0, 1).map(h => `<th>${h.title}</th>`).join('')}  <!-- Name (1) -->
+                    ${csvHeaders.slice(2, 9).map(h => `<th>${h.title}</th>`).join('')}  <!-- Date to Address (2-9) -->
+                    ${csvHeaders.slice(9, 10).map(h => `<th>${h.title}</th>`).join('')} <!-- Relation (10) -->
+                    ${csvHeaders.slice(1, 2).map(h => `<th>${h.title}</th>`).join('')}  <!-- Email (11, moved) -->
+                    ${csvHeaders.slice(10).map(h => `<th>${h.title}</th>`).join('')}    <!-- Submitted At (12) -->
+                </tr></thead>
+                <tbody>
+                    ${records.length ? records.map(r => `<tr>
+                        ${csvHeaders.slice(0, 1).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}  <!-- Name -->
+                        ${csvHeaders.slice(2, 9).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}  <!-- Date to Address -->
+                        ${csvHeaders.slice(9, 10).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')} <!-- Relation -->
+                        ${csvHeaders.slice(1, 2).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}  <!-- Email -->
+                        ${csvHeaders.slice(10).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}    <!-- Submitted At -->
+                    </tr>`).join('') : '<tr><td colspan="' + csvHeaders.length + '">No data</td></tr>'}
+                </tbody>
             </table>
             <p><a href="/family_form.html">Back to Form</a></p>
         `);
