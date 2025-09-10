@@ -3,143 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Family Event Form</title>
+    <title>SRI GOPALAKRISHNA SWAMY TEMPLE, CHAMRAJ ESTATE</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        form { max-width: 600px; }
-        .family-member { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        label { display: inline-block; width: 150px; }
-        input, textarea { width: 200px; }
-        textarea { vertical-align: top; height: 60px; }
-        button { margin: 5px; }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        h1 { text-align: center; color: #006600; }
+        p { text-align: center; color: #333; }
+        form { display: flex; flex-direction: column; gap: 10px; }
+        label { font-weight: bold; }
+        input, textarea, select { padding: 8px; margin-bottom: 10px; }
+        button { padding: 10px; background-color: #006600; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #004d00; }
     </style>
 </head>
 <body>
-    <h1>Family Event Details Form</h1>
-    <p>Enter your details as the primary submitter. Add up to 12 family members with their relation. Edit limit: 3 times per email.</p>
+    <h1>SRI GOPALAKRISHNA SWAMY TEMPLE, CHAMRAJ ESTATE</h1>
+    <p>Welcome, dear devotees! This form is for booking a special puja or archana at our temple. Please fill in your details below, and we’ll be happy to assist you. If you have any questions, feel free to reach out to us at <strong>krishnatemplechamraj@gmail.com</strong>. We’re here to help!</p>
 
-    <form id="familyForm">
-        <h2>Primary Details</h2>
-        <label for="primaryName">Name:</label><input type="text" id="primaryName" required><br><br>
-        <label for="primaryEmail">Email:</label><input type="email" id="primaryEmail" required><br><br>
-        <label for="primaryDateOfEvent">Date of Event:</label><input type="date" id="primaryDateOfEvent" required><br><br>
-        <label for="primaryEventDescription">Event Description:</label><textarea id="primaryEventDescription" required></textarea><br><br>
-        <label for="primaryGotra">Gotra:</label><input type="text" id="primaryGotra" required><br><br>
-        <label for="primaryNakshatra">Nakshatra:</label><input type="text" id="primaryNakshatra" required><br><br>
-        <label for="primaryRashi">Rashi:</label><input type="text" id="primaryRashi" required><br><br>
-        <label for="primaryPhone">Phone No.:</label><input type="tel" id="primaryPhone"><br><br>
-        <label for="primaryAddress">Address:</label><textarea id="primaryAddress" required></textarea><br><br>
-        <label for="familyMemberCount">No. of Family Members:</label><input type="number" id="familyMemberCount" min="0" max="12" value="0" oninput="updateFamilyForms()"><br><br>
+    <form id="familyForm" action="/save" method="POST">
+        <!-- Primary Member -->
+        <h3>Primary Member Details</h3>
+        <label for="primaryName">Full Name:</label>
+        <input type="text" id="primaryName" name="primary[name]" required>
 
-        <h2>Family Members</h2>
-        <div id="familyMembers"></div>
+        <label for="primaryEmail">Email:</label>
+        <input type="email" id="primaryEmail" name="primary[email]" required>
+
+        <label for="primaryDateOfEvent">Date of Event (YYYY-MM-DD):</label>
+        <input type="date" id="primaryDateOfEvent" name="primary[dateOfEvent]" required>
+
+        <label for="primaryEventDescription">Event Description:</label>
+        <textarea id="primaryEventDescription" name="primary[eventDescription]" rows="4"></textarea>
+
+        <label for="primaryGotra">Gotra:</label>
+        <input type="text" id="primaryGotra" name="primary[gotra]">
+
+        <label for="primaryNakshatra">Nakshatra:</label>
+        <input type="text" id="primaryNakshatra" name="primary[nakshatra]">
+
+        <label for="primaryRashi">Rashi:</label>
+        <input type="text" id="primaryRashi" name="primary[rashi]">
+
+        <label for="primaryPhone">Phone No.:</label>
+        <input type="tel" id="primaryPhone" name="primary[phone]">
+
+        <label for="primaryAddress">Address:</label>
+        <textarea id="primaryAddress" name="primary[address]" rows="3"></textarea>
+
+        <!-- Family Members -->
+        <h3>Family Members (Optional)</h3>
+        <div id="familyMembers">
+            <div class="familyMember">
+                <label for="familyName0">Full Name:</label>
+                <input type="text" name="family[0][name]">
+
+                <label for="familyDateOfEvent0">Date of Event (YYYY-MM-DD):</label>
+                <input type="date" name="family[0][dateOfEvent]">
+
+                <label for="familyEventDescription0">Event Description:</label>
+                <textarea name="family[0][eventDescription]" rows="4"></textarea>
+
+                <label for="familyGotra0">Gotra:</label>
+                <input type="text" name="family[0][gotra]">
+
+                <label for="familyNakshatra0">Nakshatra:</label>
+                <input type="text" name="family[0][nakshatra]">
+
+                <label for="familyRashi0">Rashi:</label>
+                <input type="text" name="family[0][rashi]">
+
+                <label for="familyPhone0">Phone No.:</label>
+                <input type="tel" name="family[0][phone]">
+
+                <label for="familyAddress0">Address:</label>
+                <textarea name="family[0][address]" rows="3"></textarea>
+
+                <label for="familyRelation0">Relation to Primary:</label>
+                <input type="text" name="family[0][relation]" placeholder="e.g., Spouse">
+            </div>
+        </div>
+        <button type="button" onclick="addFamilyMember()">Add Another Family Member</button>
 
         <button type="submit">Submit</button>
     </form>
 
     <script>
-        let memberCount = 0;
-
-        function updateFamilyForms() {
-            const count = parseInt(document.getElementById('familyMemberCount').value) || 0;
-            if (count > 12) {
-                alert('Max 12 family members');
-                document.getElementById('familyMemberCount').value = 12;
-                return;
-            }
-            const familyDiv = document.getElementById('familyMembers');
-            familyDiv.innerHTML = '';
-            memberCount = 0;
-            for (let i = 0; i < count; i++) addFamilyMember(false);
-        }
-
-        function addFamilyMember(increment = true) {
-            if (increment && memberCount >= 12) {
-                alert('Max 12 family members');
-                return;
-            }
-            if (increment) memberCount++;
+        let familyCount = 1;
+        function addFamilyMember() {
             const div = document.createElement('div');
-            div.className = 'family-member';
+            div.className = 'familyMember';
             div.innerHTML = `
-                <h3>Member ${memberCount}</h3>
-                <label for="name${memberCount}">Name:</label><input type="text" id="name${memberCount}" required><br><br>
-                <label for="dateOfEvent${memberCount}">Date of Event:</label><input type="date" id="dateOfEvent${memberCount}" required><br><br>
-                <label for="eventDescription${memberCount}">Event Description:</label><textarea id="eventDescription${memberCount}" required></textarea><br><br>
-                <label for="gotra${memberCount}">Gotra:</label><input type="text" id="gotra${memberCount}" required><br><br>
-                <label for="nakshatra${memberCount}">Nakshatra:</label><input type="text" id="nakshatra${memberCount}" required><br><br>
-                <label for="rashi${memberCount}">Rashi:</label><input type="text" id="rashi${memberCount}" required><br><br>
-                <label for="phone${memberCount}">Phone No.:</label><input type="tel" id="phone${memberCount}"><br><br>
-                <label for="address${memberCount}">Address:</label><textarea id="address${memberCount}" required></textarea><br><br>
-                <label for="relation${memberCount}">Relation:</label><input type="text" id="relation${memberCount}" required><br><br>
+                <label for="familyName${familyCount}">Full Name:</label>
+                <input type="text" name="family[${familyCount}][name]">
+
+                <label for="familyDateOfEvent${familyCount}">Date of Event (YYYY-MM-DD):</label>
+                <input type="date" name="family[${familyCount}][dateOfEvent]">
+
+                <label for="familyEventDescription${familyCount}">Event Description:</label>
+                <textarea name="family[${familyCount}][eventDescription]" rows="4"></textarea>
+
+                <label for="familyGotra${familyCount}">Gotra:</label>
+                <input type="text" name="family[${familyCount}][gotra]">
+
+                <label for="familyNakshatra${familyCount}">Nakshatra:</label>
+                <input type="text" name="family[${familyCount}][nakshatra]">
+
+                <label for="familyRashi${familyCount}">Rashi:</label>
+                <input type="text" name="family[${familyCount}][rashi]">
+
+                <label for="familyPhone${familyCount}">Phone No.:</label>
+                <input type="tel" name="family[${familyCount}][phone]">
+
+                <label for="familyAddress${familyCount}">Address:</label>
+                <textarea name="family[${familyCount}][address]" rows="3"></textarea>
+
+                <label for="familyRelation${familyCount}">Relation to Primary:</label>
+                <input type="text" name="family[${familyCount}][relation]" placeholder="e.g., Family Member">
             `;
             document.getElementById('familyMembers').appendChild(div);
-            if (increment) document.getElementById('familyMemberCount').value = memberCount;
+            familyCount++;
         }
-
-        document.getElementById('familyForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const primary = {
-                name: document.getElementById('primaryName').value,
-                email: document.getElementById('primaryEmail').value,
-                dateOfEvent: document.getElementById('primaryDateOfEvent').value,
-                eventDescription: document.getElementById('primaryEventDescription').value,
-                gotra: document.getElementById('primaryGotra').value,
-                nakshatra: document.getElementById('primaryNakshatra').value,
-                rashi: document.getElementById('primaryRashi').value,
-                phone: document.getElementById('primaryPhone').value,
-                address: document.getElementById('primaryAddress').value
-            };
-            const family = [];
-            document.querySelectorAll('.family-member').forEach(m => {
-                family.push({
-                    name: m.querySelector(`input[id^="name"]`).value,
-                    dateOfEvent: m.querySelector(`input[id^="dateOfEvent"]`).value,
-                    eventDescription: m.querySelector(`textarea[id^="eventDescription"]`).value,
-                    gotra: m.querySelector(`input[id^="gotra"]`).value,
-                    nakshatra: m.querySelector(`input[id^="nakshatra"]`).value,
-                    rashi: m.querySelector(`input[id^="rashi"]`).value,
-                    phone: m.querySelector(`input[id^="phone"]`).value,
-                    address: m.querySelector(`textarea[id^="address"]`).value,
-                    relation: m.querySelector(`input[id^="relation"]`).value
-                });
-            });
-            const familyMemberCount = parseInt(document.getElementById('familyMemberCount').value) || 0;
-
-            if (!primary.email.includes('@') || !primary.dateOfEvent) {
-                alert('Invalid email or date');
-                return;
-            }
-            if (familyMemberCount > 12 || family.length !== familyMemberCount) {
-                alert('Invalid family member count');
-                return;
-            }
-
-            fetch(`/edit-count/${encodeURIComponent(primary.email)}`)
-                .then(r => r.json())
-                .then(d => {
-                    if (d.editCount >= 3) {
-                        alert('Edit limit reached');
-                        return;
-                    }
-                    fetch('/save', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ primary, family, familyMemberCount })
-                    }).then(r => r.json()).then(d => {
-                        alert(d.message);
-                        document.getElementById('familyForm').reset();
-                        document.getElementById('familyMembers').innerHTML = '';
-                        document.getElementById('familyMemberCount').value = 0;
-                    }).catch(e => {
-                        console.error('Submit error:', e);
-                        alert('Error saving');
-                    });
-                }).catch(e => {
-                    console.error('Edit count error:', e);
-                    alert('Error checking edit count');
-                });
-        });
     </script>
 </body>
 </html>
