@@ -172,7 +172,7 @@
 
     <script>
         let memberCount = 0;
-        const gotraList = ["Agastya", "Atri/Atreyasa", "Alambani", "Angad", "Angirasa", "Ahabhunasa", "Aupamanyava", "Babhravya", "Bharadwaj", "Bhargava", "Bhakdi", "Bhaskara", "Chandilya", "Charora", "Chikitasa", "Chyavana", "Dalabhya", "Darbhas", "Dev", "Dhananjaya", "Dhanvantari", "Galvasaya", "Garga", "Gautamasa", "Gaubhilya", "Ghrit-Kaushika", "Harita/Haritasa", "Hukman Bhal", "Jamadagni", "Jatukarna", "Kalabodhana/Kalaboudha/Kalabhavasa", "Kamakayana Vishwamitra", "Kanva", "Kaushikasa", "Kapi", "Kapil", "Kapinjala", "Karmani", "Kashyapasa", "Kaundinyasa", "Kaunsh", "Kaushal/Kaushalas/Kushal", "Kaushik/Koshik/Koushik/Kushika", "Kaustubha", "Kausyagasa", "Kavist", "Katyayana", "Krishnatriya/Krishnatreeya", "Kundina-Gowtama", "Kusha", "Kutsa", "Kutsasa", "Lakhi", "Lohit", "Lohita-Kowshika", "Lomasha", "Mandavya", "Marichi", "Markandeya", "Mauna Bhargava", "Matanga", "Mudgala/Maudgalya/Moudgil", "Mihirayan", "Naidhruva", "Nithunthana/Naithunthasa", "Nyrdavakashyapa", "Nrisimhadevara", "Parashara", "Parthivasa", "Pouragutsya", "Punagashella", "Ratheetarasa", "Purang", "Pradnya", "Rathitara", "Rohinya", "Rauksaayana", "Saminathen", "Sanatana", "Salankayana", "Sangar", "Sanaka", "Sanaga", "Sanjaya", "Sankhyayana", "Sankrithi", "Sankyanasa", "Sathamarshana", "Shandilya", "Sanas", "Sandilyasa", "Shandelosya", "Saawarna", "Saharia Joshi", "Sauparna", "Savaran", "Savita", "Somnasser", "Pratanansya", "Saankritya/Sakarawar", "Soral", "Srivasta", "Sumarkanth", "Suryadhwaja", "Shaktri", "Shaunaka", "Sravanvaitas", "Surya", "Swatantra Kabisa", "Tugnait", "Roushayadana", "Upadhyay", "Upamanyu", "Upreti", "Vadula", "Valmiki", "Vardhviyasa", "Vardhulasa", "Vardhyswasa", "Vashishta", "Vatsa", "Vatsyayan", "Veetahavya", "Vishnuvardhana", "Vishnuvruddha", "Vartantu", "Utsasya", "Suparna", "Shiva", "Kuvera"];
+        const gotraList = ["Agastya", "Atri/Atreyasa", "Alambani", "Angad", "Angirasa", "Ahabhunasa", "Aupamanyava", "Babhravya", "Bharadwaj", "Bhargava", "Bhakdi", "Bhaskara", "Chandilya", "Charora", "Chikitasa", "Chyavana", "Dalabhya", "Darbhas", "Dev", "Dhananjaya", "Dhanvantari", "Galvasaya", "Garga", "Gautamasa", "Gaubhilya", "Ghrit-Kaushika", "Harita/Haritasa", "Hukman Bhal", "Jamadagni", "Jatukarna", "Kalabodhana/Kalaboudha/Kalabhavasa", "Kamakayana Vishwamitra", "Kanva", "Kaushikasa", "Kapi", "Kapil", "Kapinjala", "Karmani", "Kashyapasa", "Kaundinyasa", "Kaunsh", "Kaushal/Kaushalas/Kushal", "Kaushik/Koshik/Koushik/Kushika", "Kaustubha", "Kausyagasa", "Kavist", "Katyayana", "Krishnatriya/Krishnatreeya", "Kundina-Gowtama", "Kusha", "Kutsa", "Kutsasa", "Lakhi", "Lohit", "Lohita-Kowshika", "Lomasha", "Mandavya", "Marichi", "Markandeya", "Mauna Bhargava", "Matanga", "Mudgala/Maudgalya/Moudgil", "Mihirayan", "Naidhruva", "Nithunthana/Naithunthasa", "Nyrdavakashyapa", "Nrisimhadevara", "Parashara", "Parthivasa", "Pouragutsya", "Punagashella", "Ratheetarasa", "Purang", "Pradnya", "Rathitara", "Rohinya", "Rauksaayana", "Saminathen", "Sanatana", "Salankayana", "Sangar", "Sanaka", "Sanaga", "Sanjaya", "Sankhyayana", "Sankrithi", "Sankyanasa", "Sathamarshana", "Shandilya", "Sanas", "Sandilyasa", "Shandelosya", "Saawrna", "Saharia Joshi", "Sauparna", "Savaran", "Savita", "Somnasser", "Pratanansya", "Saankritya/Sakarawar", "Soral", "Srivasta", "Sumarkanth", "Suryadhwaja", "Shaktri", "Shaunaka", "Sravanvaitas", "Surya", "Swatantra Kabisa", "Tugnait", "Roushayadana", "Upadhyay", "Upamanyu", "Upreti", "Vadula", "Valmiki", "Vardhviyasa", "Vardhulasa", "Vardhyswasa", "Vashishta", "Vatsa", "Vatsyayan", "Veetahavya", "Vishnuvardhana", "Vishnuvruddha", "Vartantu", "Utsasya", "Suparna", "Shiva", "Kuvera"];
         const nakshatraList = ["Ashwini", "Bharani", "Karthigai", "Rohini", "Mrigasheersham", "Thiruvaathirai", "Punarpoosam", "Poosam", "Aayilyam", "Magham", "Pooram", "Uthiram", "Hastham", "Chithirai", "Swathi", "Vishakam", "Anusham", "Kettai", "Moolam", "Pooraadam", "Uthiraadam", "Thiruvonam", "Avittam", "Sadayam", "Poorattathi", "Uthirattathi", "Revathi"];
         const tamilMonthList = ["Chithirai", "Vaikasi", "Aani", "Aadi", "Avani", "Purattasi", "Aippasi", "Karthigai", "Thai", "Massi", "Panguni"];
         const rashiList = ["Mesham", "Vrishabham", "Mithunam", "Katakam", "Simmham", "Kanya", "Tula", "Vrishchikam", "Dhanur", "Makaram", "Kumbham", "Meenam"];
@@ -226,15 +226,14 @@
             }
             const familyDiv = document.getElementById('familyMembers');
             familyDiv.innerHTML = '';
-            memberCount = 0;
-            for (let i = 0; i < count; i++) addFamilyMember(false);
+            memberCount = 0; 
+            for (let i = 0; i < count; i++) {
+                memberCount = i + 1; // Start from 1
+                addFamilyMember(false);
+            }
         }
 
         function addFamilyMember(increment = true) {
-            if (increment && memberCount >= 12) {
-                alert('Max 12 family members');
-                return;
-            }
             if (increment) memberCount++;
             const div = document.createElement('div');
             div.className = 'family-member';
@@ -295,7 +294,12 @@
                 </div>
             `;
             document.getElementById('familyMembers').appendChild(div);
-            if (increment) document.getElementById('familyMemberCount').value = memberCount;
+        }
+
+        function editAddress(memberId) {
+            const addressInput = document.getElementById(`address${memberId}`);
+            addressInput.readOnly = !addressInput.readOnly;
+            addressInput.focus();
         }
 
         document.getElementById('familyForm').addEventListener('submit', (e) => {
