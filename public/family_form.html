@@ -291,17 +291,11 @@
                 </div>
                 <div class="field-group">
                     <label for="address${memberCount}">Address:</label>
-                    <textarea id="address${memberCount}" value="${primaryAddress}">${primaryAddress}</textarea><button type="button" onclick="editAddress(${memberCount})">Edit</button>
+                    <textarea id="address${memberCount}" value="${primaryAddress}">${primaryAddress}</textarea>
                 </div>
             `;
             document.getElementById('familyMembers').appendChild(div);
             if (increment) document.getElementById('familyMemberCount').value = memberCount;
-        }
-
-        function editAddress(memberId) {
-            const addressInput = document.getElementById(`address${memberId}`);
-            addressInput.readOnly = !addressInput.readOnly;
-            addressInput.focus();
         }
 
         document.getElementById('familyForm').addEventListener('submit', (e) => {
