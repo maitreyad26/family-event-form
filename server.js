@@ -18,18 +18,19 @@ const editCountsFilePath = path.join(__dirname, 'edit_counts.json');
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, { serverApi: { version: '1', strict: true, deprecationErrors: true } });
 
-// CSV headers for backup
+// CSV headers for backup (updated with new fields and sequence)
 const csvHeaders = [
     { id: 'name', title: 'Name' },
-    { id: 'email', title: 'Email' },
-    { id: 'dateOfEvent', title: 'Date of Event' },
-    { id: 'eventDescription', title: 'Event Description' },
+    { id: 'occasion', title: 'Occasion Name' },
+    { id: 'dateOfOccasion', title: 'Date of Occasion' },
     { id: 'gotra', title: 'Gotra' },
     { id: 'nakshatra', title: 'Nakshatra' },
+    { id: 'tamilMonth', title: 'Tamil Month' },
     { id: 'rashi', title: 'Rashi' },
-    { id: 'phone', title: 'Phone No.' },
     { id: 'address', title: 'Address' },
+    { id: 'phone', title: 'Phone Number' },
     { id: 'relation', title: 'Relation to Primary' },
+    { id: 'email', title: 'Email ID' },
     { id: 'submittedAt', title: 'Submitted At' }
 ];
 
@@ -62,7 +63,7 @@ async function connectDB() {
     }
 }
 
-// Save form data (with true editing on resubmit)
+// Save form data (updated with new field names and sequence)
 app.post('/save', async (req, res) => {
     try {
         const { primary, family = [] } = req.body || {};
@@ -88,64 +89,71 @@ app.post('/save', async (req, res) => {
         }
 
         const collection = await connectDB();
-        let updatedRecords = [
-            {
-                name: primary.name || 'N/A',
-                email: primary.email || 'N/A',
-                dateOfEvent: primary.dateOfEvent || '',
-                eventDescription: primary.eventDescription || '',
-                gotra: primary.gotra || 'N/A',
-                nakshatra: primary.nakshatra || 'N/A',
-                rashi: primary.rashi || 'N/A',
-                phone: primary.phone || 'N/A',
-                address: primary.address || '',
-                relation: 'Self (Primary)',
-                submittedAt
-            },
-            ...family.map((member, index) => ({
-                name: member.name || 'N/A',
-                email: primary.email || 'N/A',
-                dateOfEvent: member.dateOfEvent || '',
-                eventDescription: member.eventDescription || '',
-                gotra: member.gotra || 'N/A',
-                nakshatra: member.nakshatra || 'N/A',
-                rashi: member.rashi || 'N/A',
-                phone: member.phone || 'N/A',
-                address: member.address || '',
-                relation: member.relation || (index === 0 ? 'Spouse' : `Family Member ${index + 1}`),
-                submittedAt
-            }))
-        ];
 
-        // If editCount > 0, update the most recent submission
+        // Prepare records for MongoDB and CSV (primary first)
+        const primaryRecord = {
+            name: primary.name || 'N/A',
+            email: primary.email || 'N/A',
+            phone: primary.phone || 'N/A',
+            occasion: primary.occasion || '',
+            dateOfOccasion: primary.dateOfOccasion || '',
+            gotra: primary.gotra || 'N/A',
+            nakshatra: primary.nakshatra || 'N/A',
+            tamilMonth: primary.tamilMonth || 'N/A',
+            rashi: primary.rashi || 'N/A',
+            address: primary.address || '',
+            relation: 'Self (Primary)',
+            submittedAt
+        };
+
+        // Family records (all with primary's email)
+        const familyRecords = family.map((member, index) => ({
+            name: member.name || 'N/A',
+            email: primary.email || 'N/A', // Use primary's email
+            phone: member.phone || 'N/A',
+            occasion: member.occasion || '',
+            dateOfOccasion: member.dateOfOccasion || '',
+            gotra: member.gotra || 'N/A',
+            nakshatra: member.nakshatra || 'N/A',
+            tamilMonth: member.tamilMonth || 'N/A',
+            rashi: member.rashi || 'N/A',
+            address: member.address || primary.address || '', // Use member's address or primary's
+            relation: member.relation || `Family Member ${index + 1}`,
+            submittedAt
+        }));
+
+        const newRecords = [primaryRecord, ...familyRecords];
+
+        // If editCount > 0, update existing records for this email
         if (editCount > 0) {
-            const latestSubmission = await collection.find({ email: primary.email.toLowerCase() })
-                .sort({ submittedAt: -1 })
-                .limit(1 + family.length) // Include primary + family
-                .toArray();
-            if (latestSubmission.length > 0) {
-                const latestIds = latestSubmission.map(doc => doc._id);
-                await collection.updateMany(
-                    { _id: { $in: latestIds } },
-                    { $set: { ...updatedRecords[0], submittedAt } },
-                    { multi: true }
-                );
-                editCounts[emailKey] = editCount + 1;
-            } else {
-                await collection.insertMany(updatedRecords, { ordered: false });
-                editCounts[emailKey] = 1;
-            }
+            await collection.deleteMany({ email: primary.email.toLowerCase() });
+            await collection.insertMany(newRecords, { ordered: false });
+            editCounts[emailKey] = editCount + 1;
         } else {
-            await collection.insertMany(updatedRecords, { ordered: false });
+            await collection.insertMany(newRecords, { ordered: false });
             editCounts[emailKey] = 1;
         }
 
         // Save edit counts
         fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
 
-        // Sync CSV: Rewrite with all current MongoDB records
+        // Sync CSV: Rewrite with all current MongoDB records (in admin sequence)
         const allRecords = await collection.find({}).toArray();
-        await csvWriter.writeRecords(allRecords).catch(err => console.error('CSV write error:', err));
+        const csvRecords = allRecords.map(record => ({
+            name: record.name,
+            occasion: record.occasion,
+            dateOfOccasion: record.dateOfOccasion,
+            gotra: record.gotra,
+            nakshatra: record.nakshatra,
+            tamilMonth: record.tamilMonth,
+            rashi: record.rashi,
+            address: record.address,
+            phone: record.phone,
+            relation: record.relation,
+            email: record.email,
+            submittedAt: record.submittedAt
+        }));
+        await csvWriter.writeRecords(csvRecords).catch(err => console.error('CSV write error:', err));
 
         res.json({ message: 'Data saved to database and CSV successfully!' });
     } catch (error) {
@@ -154,7 +162,7 @@ app.post('/save', async (req, res) => {
     }
 });
 
-// Admin view (show all data by default, flexible month/year filter)
+// Admin view (updated sequence and button text)
 app.get('/admin', async (req, res) => {
     const password = req.query.password;
     if (password !== ADMIN_PASSWORD) {
@@ -170,16 +178,16 @@ app.get('/admin', async (req, res) => {
             const paddedMonth = String(month).padStart(2, '0');
             if (year && !isNaN(year)) {
                 // Both month and year: strict AND match
-                query.dateOfEvent = { $regex: `^${year}-${paddedMonth}-` };
+                query.dateOfOccasion = { $regex: `^${year}-${paddedMonth}-` };
                 searchTitle = ` (Filtered for ${month}/${year})`;
             } else {
                 // Month only: match any year
-                query.dateOfEvent = { $regex: `-${paddedMonth}-` };
+                query.dateOfOccasion = { $regex: `-${paddedMonth}-` };
                 searchTitle = ` (Filtered for Month ${month})`;
             }
         } else if (year && !isNaN(year)) {
             // Year only: match any month
-            query.dateOfEvent = { $regex: `^${year}-` };
+            query.dateOfOccasion = { $regex: `^${year}-` };
             searchTitle = ` (Filtered for Year ${year})`;
         }
     }
@@ -189,8 +197,8 @@ app.get('/admin', async (req, res) => {
 
         // Custom sort: Prioritize month (Jan-Dec), then day, then year asc, then name asc if same date
         records.sort((a, b) => {
-            const dateA = a.dateOfEvent ? new Date(a.dateOfEvent) : new Date(0);
-            const dateB = b.dateOfEvent ? new Date(b.dateOfEvent) : new Date(0);
+            const dateA = a.dateOfOccasion ? new Date(a.dateOfOccasion) : new Date(0);
+            const dateB = b.dateOfOccasion ? new Date(b.dateOfOccasion) : new Date(0);
             if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
                 return isNaN(dateA.getTime()) ? -1 : 1; // Invalid dates to top
             }
@@ -200,29 +208,37 @@ app.get('/admin', async (req, res) => {
             return (a.name || '').localeCompare(b.name || '');
         });
 
+        // Reorder records for admin display sequence
+        const displayRecords = records.map(record => ({
+            name: record.name,
+            occasion: record.occasion,
+            dateOfOccasion: record.dateOfOccasion,
+            gotra: record.gotra,
+            nakshatra: record.nakshatra,
+            tamilMonth: record.tamilMonth,
+            rashi: record.rashi,
+            address: record.address,
+            phone: record.phone,
+            relation: record.relation,
+            email: record.email,
+            submittedAt: record.submittedAt
+        }));
+
         res.send(`
             <h1>Family Event Admin Data (Sorted by Date)${searchTitle}</h1>
             <form method="get" action="/admin">
                 <input type="hidden" name="password" value="${password}">
                 <label>Month (1-12):</label> <input name="month" type="number" min="1" max="12" value="${month || ''}">
                 <label>Year (e.g., 2026):</label> <input name="year" type="number" value="${year || ''}">
-                <button type="submit">Search by Date of Event</button>
+                <button type="submit">Search by Date of Occasion</button>
             </form>
             <table border="1">
                 <thead><tr>
-                    ${csvHeaders.slice(0, 1).map(h => `<th>${h.title}</th>`).join('')}  <!-- Name (1) -->
-                    ${csvHeaders.slice(2, 9).map(h => `<th>${h.title}</th>`).join('')}  <!-- Date to Address (2-9) -->
-                    ${csvHeaders.slice(9, 10).map(h => `<th>${h.title}</th>`).join('')} <!-- Relation (10) -->
-                    ${csvHeaders.slice(1, 2).map(h => `<th>${h.title}</th>`).join('')}  <!-- Email (11, moved) -->
-                    ${csvHeaders.slice(10).map(h => `<th>${h.title}</th>`).join('')}    <!-- Submitted At (12) -->
+                    ${csvHeaders.map(h => `<th>${h.title}</th>`).join('')}
                 </tr></thead>
                 <tbody>
-                    ${records.length ? records.map(r => `<tr>
-                        ${csvHeaders.slice(0, 1).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}  <!-- Name -->
-                        ${csvHeaders.slice(2, 9).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}  <!-- Date to Address -->
-                        ${csvHeaders.slice(9, 10).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')} <!-- Relation -->
-                        ${csvHeaders.slice(1, 2).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}  <!-- Email -->
-                        ${csvHeaders.slice(10).map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}    <!-- Submitted At -->
+                    ${displayRecords.length ? displayRecords.map(r => `<tr>
+                        ${csvHeaders.map(h => `<td>${r[h.id] || 'N/A'}</td>`).join('')}
                     </tr>`).join('') : '<tr><td colspan="' + csvHeaders.length + '">No data</td></tr>'}
                 </tbody>
             </table>
@@ -258,7 +274,21 @@ app.post('/delete', async (req, res) => {
 
         // Sync CSV: Rewrite with remaining MongoDB records
         const allRecords = await collection.find({}).toArray();
-        await csvWriter.writeRecords(allRecords).catch(err => console.error('CSV write error:', err));
+        const csvRecords = allRecords.map(record => ({
+            name: record.name,
+            occasion: record.occasion,
+            dateOfOccasion: record.dateOfOccasion,
+            gotra: record.gotra,
+            nakshatra: record.nakshatra,
+            tamilMonth: record.tamilMonth,
+            rashi: record.rashi,
+            address: record.address,
+            phone: record.phone,
+            relation: record.relation,
+            email: record.email,
+            submittedAt: record.submittedAt
+        }));
+        await csvWriter.writeRecords(csvRecords).catch(err => console.error('CSV write error:', err));
 
         // Reset edit count
         let editCounts = JSON.parse(fs.readFileSync(editCountsFilePath, 'utf8')) || {};

@@ -8,34 +8,92 @@
         body { 
             font-family: Arial, sans-serif; 
             margin: 20px; 
-            text-align: center; /* Center align everything */
+            text-align: center; 
+            background-color: #f9f9f9; 
         }
         form { 
             max-width: 600px; 
-            display: inline-block; /* Center the form within body */
+            display: inline-block; 
+            background-color: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
         }
-        .family-member { 
-            border: 1px solid #ccc; 
-            padding: 10px; 
-            margin-bottom: 10px; 
-            text-align: center; /* Center align family member section */
+        .section { 
+            margin-bottom: 20px; 
+        }
+        .field-group { 
+            margin-bottom: 15px; 
+            text-align: left; 
         }
         label { 
             display: inline-block; 
             width: 150px; 
-            font-size: 18px; /* Increased font size */
+            font-size: 18px; 
+            vertical-align: top; 
+            margin-right: 10px; 
         }
         input, textarea { 
-            width: 250px; /* Increased box size */
-            font-size: 18px; /* Increased font size */
+            width: 250px; 
+            font-size: 18px; 
+            padding: 5px; 
         }
         textarea { 
             vertical-align: top; 
-            height: 80px; /* Increased height for textarea */
+            height: 80px; 
         }
         button { 
-            margin: 5px; 
-            font-size: 18px; /* Increased font size */
+            margin: 10px 5px; 
+            font-size: 18px; 
+            padding: 5px 15px; 
+        }
+        .dropdown-search {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-search input {
+            width: 250px;
+            padding: 5px;
+            margin-bottom: 5px;
+            border: 1px solid #ccc;
+        }
+        .dropdown-search ul {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 250px;
+            z-index: 1001;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .dropdown-search ul.show {
+            display: block;
+        }
+        .dropdown-search ul li {
+            padding: 8px 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .dropdown-search ul li:last-child {
+            border-bottom: none;
+        }
+        .dropdown-search ul li:hover {
+            background-color: #f0f0f0;
+        }
+        .family-member { 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            text-align: left; 
+            border-radius: 5px; 
         }
     </style>
 </head>
@@ -44,26 +102,120 @@
     <p>Welcome, dear devotees! This form is for booking a special puja / archana at our temple. Prasad will be delivered to the devotees. If you have any questions, contact us at <strong>krishnatemplechamraj@gmail.com</strong>.</p>
 
     <form id="familyForm">
-        <h2>Primary Details</h2>
-        <label for="primaryName">Name:</label><input type="text" id="primaryName" required><br><br>
-        <label for="primaryEmail">Email:</label><input type="email" id="primaryEmail" required><br><br>
-        <label for="primaryDateOfEvent">Date of Event:</label><input type="date" id="primaryDateOfEvent" required><br><br>
-        <label for="primaryEventDescription">Event Description:</label><textarea id="primaryEventDescription" required></textarea><br><br>
-        <label for="primaryGotra">Gotra:</label><input type="text" id="primaryGotra" required><br><br>
-        <label for="primaryNakshatra">Nakshatra:</label><input type="text" id="primaryNakshatra" required><br><br>
-        <label for="primaryRashi">Rashi:</label><input type="text" id="primaryRashi" required><br><br>
-        <label for="primaryPhone">Phone No.:</label><input type="tel" id="primaryPhone"><br><br>
-        <label for="primaryAddress">Address:</label><textarea id="primaryAddress" required></textarea><br><br>
-        <label for="familyMemberCount">No. of Family Members:</label><input type="number" id="familyMemberCount" min="0" max="12" value="0" oninput="updateFamilyForms()"><br><br>
+        <div class="section">
+            <h2>Primary Details</h2>
+            <div class="field-group">
+                <label for="primaryName">Name:</label>
+                <input type="text" id="primaryName" required>
+            </div>
+            <div class="field-group">
+                <label for="primaryEmail">Email ID:</label>
+                <input type="email" id="primaryEmail" required>
+            </div>
+            <div class="field-group">
+                <label for="primaryPhone">Phone Number:</label>
+                <input type="tel" id="primaryPhone" required>
+            </div>
+            <div class="field-group">
+                <label for="primaryOccasion">Occasion Name:</label>
+                <textarea id="primaryOccasion" required></textarea>
+            </div>
+            <div class="field-group">
+                <label for="primaryDateOfOccasion">Date of Occasion:</label>
+                <input type="date" id="primaryDateOfOccasion" required>
+            </div>
+            <div class="field-group">
+                <label for="primaryGotra">Gotra:</label>
+                <div class="dropdown-search">
+                    <input type="text" id="primaryGotra" onfocus="showFullList('primaryGotra', gotraList)" onkeyup="filterOptions('primaryGotra', gotraList)" required>
+                    <ul id="primaryGotraOptions"></ul>
+                </div>
+            </div>
+            <div class="field-group">
+                <label for="primaryNakshatra">Nakshatra:</label>
+                <div class="dropdown-search">
+                    <input type="text" id="primaryNakshatra" onfocus="showFullList('primaryNakshatra', nakshatraList)" onkeyup="filterOptions('primaryNakshatra', nakshatraList)" required>
+                    <ul id="primaryNakshatraOptions"></ul>
+                </div>
+            </div>
+            <div class="field-group">
+                <label for="primaryTamilMonth">Tamil Month:</label>
+                <div class="dropdown-search">
+                    <input type="text" id="primaryTamilMonth" onfocus="showFullList('primaryTamilMonth', tamilMonthList)" onkeyup="filterOptions('primaryTamilMonth', tamilMonthList)" required>
+                    <ul id="primaryTamilMonthOptions"></ul>
+                </div>
+            </div>
+            <div class="field-group">
+                <label for="primaryRashi">Rashi:</label>
+                <div class="dropdown-search">
+                    <input type="text" id="primaryRashi" onfocus="showFullList('primaryRashi', rashiList)" onkeyup="filterOptions('primaryRashi', rashiList)" required>
+                    <ul id="primaryRashiOptions"></ul>
+                </div>
+            </div>
+            <div class="field-group">
+                <label for="primaryAddress">Address:</label>
+                <textarea id="primaryAddress" required></textarea>
+            </div>
+            <div class="field-group">
+                <label for="familyMemberCount">Add Family Members (0-12):</label>
+                <input type="number" id="familyMemberCount" min="0" max="12" value="0" oninput="updateFamilyForms()">
+            </div>
+        </div>
 
-        <h2>Family Members</h2>
-        <div id="familyMembers"></div>
+        <div class="section">
+            <h2>Family Members</h2>
+            <div id="familyMembers"></div>
+        </div>
 
         <button type="submit">Submit</button>
     </form>
 
     <script>
         let memberCount = 0;
+        const gotraList = ["Agastya", "Atri/Atreyasa", "Alambani", "Angad", "Angirasa", "Ahabhunasa", "Aupamanyava", "Babhravya", "Bharadwaj", "Bhargava", "Bhakdi", "Bhaskara", "Chandilya", "Charora", "Chikitasa", "Chyavana", "Dalabhya", "Darbhas", "Dev", "Dhananjaya", "Dhanvantari", "Galvasaya", "Garga", "Gautamasa", "Gaubhilya", "Ghrit-Kaushika", "Harita/Haritasa", "Hukman Bhal", "Jamadagni", "Jatukarna", "Kalabodhana/Kalaboudha/Kalabhavasa", "Kamakayana Vishwamitra", "Kanva", "Kaushikasa", "Kapi", "Kapil", "Kapinjala", "Karmani", "Kashyapasa", "Kaundinyasa", "Kaunsh", "Kaushal/Kaushalas/Kushal", "Kaushik/Koshik/Koushik/Kushika", "Kaustubha", "Kausyagasa", "Kavist", "Katyayana", "Krishnatriya/Krishnatreeya", "Kundina-Gowtama", "Kusha", "Kutsa", "Kutsasa", "Lakhi", "Lohit", "Lohita-Kowshika", "Lomasha", "Mandavya", "Marichi", "Markandeya", "Mauna Bhargava", "Matanga", "Mudgala/Maudgalya/Moudgil", "Mihirayan", "Naidhruva", "Nithunthana/Naithunthasa", "Nyrdavakashyapa", "Nrisimhadevara", "Parashara", "Parthivasa", "Pouragutsya", "Punagashella", "Ratheetarasa", "Purang", "Pradnya", "Rathitara", "Rohinya", "Rauksaayana", "Saminathen", "Sanatana", "Salankayana", "Sangar", "Sanaka", "Sanaga", "Sanjaya", "Sankhyayana", "Sankrithi", "Sankyanasa", "Sathamarshana", "Shandilya", "Sanas", "Sandilyasa", "Shandelosya", "Saawarna", "Saharia Joshi", "Sauparna", "Savaran", "Savita", "Somnasser", "Pratanansya", "Saankritya/Sakarawar", "Soral", "Srivasta", "Sumarkanth", "Suryadhwaja", "Shaktri", "Shaunaka", "Sravanvaitas", "Surya", "Swatantra Kabisa", "Tugnait", "Roushayadana", "Upadhyay", "Upamanyu", "Upreti", "Vadula", "Valmiki", "Vardhviyasa", "Vardhulasa", "Vardhyswasa", "Vashishta", "Vatsa", "Vatsyayan", "Veetahavya", "Vishnuvardhana", "Vishnuvruddha", "Vartantu", "Utsasya", "Suparna", "Shiva", "Kuvera"];
+        const nakshatraList = ["Ashwini", "Bharani", "Karthigai", "Rohini", "Mrigasheersham", "Thiruvaathirai", "Punarpoosam", "Poosam", "Aayilyam", "Magham", "Pooram", "Uthiram", "Hastham", "Chithirai", "Swathi", "Vishakam", "Anusham", "Kettai", "Moolam", "Pooraadam", "Uthiraadam", "Thiruvonam", "Avittam", "Sadayam", "Poorattathi", "Uthirattathi", "Revathi"];
+        const tamilMonthList = ["Chithirai", "Vaikasi", "Aani", "Aadi", "Avani", "Purattasi", "Aippasi", "Karthigai", "Thai", "Massi", "Panguni"];
+        const rashiList = ["Mesham", "Vrishabham", "Mithunam", "Katakam", "Simmham", "Kanya", "Tula", "Vrishchikam", "Dhanur", "Makaram", "Kumbham", "Meenam"];
+
+        function showFullList(inputId, list) {
+            const input = document.getElementById(inputId);
+            const ul = document.getElementById(inputId + 'Options');
+            ul.innerHTML = '';
+            list.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                li.onclick = () => {
+                    input.value = item;
+                    ul.classList.remove('show');
+                };
+                ul.appendChild(li);
+            });
+            ul.classList.add('show');
+        }
+
+        function filterOptions(inputId, list) {
+            const input = document.getElementById(inputId);
+            const ul = document.getElementById(inputId + 'Options');
+            ul.innerHTML = '';
+            const filter = input.value.toLowerCase();
+            const filtered = list.filter(item => item.toLowerCase().includes(filter));
+            filtered.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                li.onclick = () => {
+                    input.value = item;
+                    ul.classList.remove('show');
+                };
+                ul.appendChild(li);
+            });
+            ul.classList.toggle('show', filtered.length > 0);
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown-search')) {
+                document.querySelectorAll('.dropdown-search ul').forEach(ul => ul.classList.remove('show'));
+            }
+        });
 
         function updateFamilyForms() {
             const count = parseInt(document.getElementById('familyMemberCount').value) || 0;
@@ -86,20 +238,70 @@
             if (increment) memberCount++;
             const div = document.createElement('div');
             div.className = 'family-member';
+            const primaryAddress = document.getElementById('primaryAddress').value;
             div.innerHTML = `
                 <h3>Member ${memberCount}</h3>
-                <label for="name${memberCount}">Name:</label><input type="text" id="name${memberCount}" required><br><br>
-                <label for="dateOfEvent${memberCount}">Date of Event:</label><input type="date" id="dateOfEvent${memberCount}" required><br><br>
-                <label for="eventDescription${memberCount}">Event Description:</label><textarea id="eventDescription${memberCount}" required></textarea><br><br>
-                <label for="gotra${memberCount}">Gotra:</label><input type="text" id="gotra${memberCount}" required><br><br>
-                <label for="nakshatra${memberCount}">Nakshatra:</label><input type="text" id="nakshatra${memberCount}" required><br><br>
-                <label for="rashi${memberCount}">Rashi:</label><input type="text" id="rashi${memberCount}" required><br><br>
-                <label for="phone${memberCount}">Phone No.:</label><input type="tel" id="phone${memberCount}"><br><br>
-                <label for="address${memberCount}">Address:</label><textarea id="address${memberCount}" required></textarea><br><br>
-                <label for="relation${memberCount}">Relation:</label><input type="text" id="relation${memberCount}" required><br><br>
+                <div class="field-group">
+                    <label for="name${memberCount}">Name:</label>
+                    <input type="text" id="name${memberCount}" required>
+                </div>
+                <div class="field-group">
+                    <label for="phone${memberCount}">Phone Number:</label>
+                    <input type="tel" id="phone${memberCount}" required>
+                </div>
+                <div class="field-group">
+                    <label for="relation${memberCount}">Relation:</label>
+                    <input type="text" id="relation${memberCount}" required>
+                </div>
+                <div class="field-group">
+                    <label for="occasion${memberCount}">Occasion Name:</label>
+                    <textarea id="occasion${memberCount}" required></textarea>
+                </div>
+                <div class="field-group">
+                    <label for="dateOfOccasion${memberCount}">Date of Occasion:</label>
+                    <input type="date" id="dateOfOccasion${memberCount}" required>
+                </div>
+                <div class="field-group">
+                    <label for="gotra${memberCount}">Gotra:</label>
+                    <div class="dropdown-search">
+                        <input type="text" id="gotra${memberCount}" onfocus="showFullList('gotra${memberCount}', gotraList)" onkeyup="filterOptions('gotra${memberCount}', gotraList)" required>
+                        <ul id="gotra${memberCount}Options"></ul>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="nakshatra${memberCount}">Nakshatra:</label>
+                    <div class="dropdown-search">
+                        <input type="text" id="nakshatra${memberCount}" onfocus="showFullList('nakshatra${memberCount}', nakshatraList)" onkeyup="filterOptions('nakshatra${memberCount}', nakshatraList)" required>
+                        <ul id="nakshatra${memberCount}Options"></ul>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="tamilMonth${memberCount}">Tamil Month:</label>
+                    <div class="dropdown-search">
+                        <input type="text" id="tamilMonth${memberCount}" onfocus="showFullList('tamilMonth${memberCount}', tamilMonthList)" onkeyup="filterOptions('tamilMonth${memberCount}', tamilMonthList)" required>
+                        <ul id="tamilMonth${memberCount}Options"></ul>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="rashi${memberCount}">Rashi:</label>
+                    <div class="dropdown-search">
+                        <input type="text" id="rashi${memberCount}" onfocus="showFullList('rashi${memberCount}', rashiList)" onkeyup="filterOptions('rashi${memberCount}', rashiList)" required>
+                        <ul id="rashi${memberCount}Options"></ul>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="address${memberCount}">Address:</label>
+                    <textarea id="address${memberCount}" value="${primaryAddress}">${primaryAddress}</textarea><button type="button" onclick="editAddress(${memberCount})">Edit</button>
+                </div>
             `;
             document.getElementById('familyMembers').appendChild(div);
             if (increment) document.getElementById('familyMemberCount').value = memberCount;
+        }
+
+        function editAddress(memberId) {
+            const addressInput = document.getElementById(`address${memberId}`);
+            addressInput.readOnly = !addressInput.readOnly;
+            addressInput.focus();
         }
 
         document.getElementById('familyForm').addEventListener('submit', (e) => {
@@ -107,31 +309,33 @@
             const primary = {
                 name: document.getElementById('primaryName').value,
                 email: document.getElementById('primaryEmail').value,
-                dateOfEvent: document.getElementById('primaryDateOfEvent').value,
-                eventDescription: document.getElementById('primaryEventDescription').value,
+                phone: document.getElementById('primaryPhone').value,
+                occasion: document.getElementById('primaryOccasion').value,
+                dateOfOccasion: document.getElementById('primaryDateOfOccasion').value,
                 gotra: document.getElementById('primaryGotra').value,
                 nakshatra: document.getElementById('primaryNakshatra').value,
+                tamilMonth: document.getElementById('primaryTamilMonth').value,
                 rashi: document.getElementById('primaryRashi').value,
-                phone: document.getElementById('primaryPhone').value,
                 address: document.getElementById('primaryAddress').value
             };
             const family = [];
-            document.querySelectorAll('.family-member').forEach(m => {
+            for (let i = 1; i <= memberCount; i++) {
                 family.push({
-                    name: m.querySelector(`input[id^="name"]`).value,
-                    dateOfEvent: m.querySelector(`input[id^="dateOfEvent"]`).value,
-                    eventDescription: m.querySelector(`textarea[id^="eventDescription"]`).value,
-                    gotra: m.querySelector(`input[id^="gotra"]`).value,
-                    nakshatra: m.querySelector(`input[id^="nakshatra"]`).value,
-                    rashi: m.querySelector(`input[id^="rashi"]`).value,
-                    phone: m.querySelector(`input[id^="phone"]`).value,
-                    address: m.querySelector(`textarea[id^="address"]`).value,
-                    relation: m.querySelector(`input[id^="relation"]`).value
+                    name: document.getElementById(`name${i}`).value,
+                    phone: document.getElementById(`phone${i}`).value,
+                    relation: document.getElementById(`relation${i}`).value,
+                    occasion: document.getElementById(`occasion${i}`).value,
+                    dateOfOccasion: document.getElementById(`dateOfOccasion${i}`).value,
+                    gotra: document.getElementById(`gotra${i}`).value,
+                    nakshatra: document.getElementById(`nakshatra${i}`).value,
+                    tamilMonth: document.getElementById(`tamilMonth${i}`).value,
+                    rashi: document.getElementById(`rashi${i}`).value,
+                    address: document.getElementById(`address${i}`).value
                 });
-            });
+            }
             const familyMemberCount = parseInt(document.getElementById('familyMemberCount').value) || 0;
 
-            if (!primary.email.includes('@') || !primary.dateOfEvent) {
+            if (!primary.email.includes('@') || !primary.dateOfOccasion) {
                 alert('Invalid email or date');
                 return;
             }
@@ -152,7 +356,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ primary, family, familyMemberCount })
                     }).then(r => r.json()).then(d => {
-                        alert(d.message);
+                        alert('Your response has been submitted!');
                         document.getElementById('familyForm').reset();
                         document.getElementById('familyMembers').innerHTML = '';
                         document.getElementById('familyMemberCount').value = 0;
