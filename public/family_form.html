@@ -123,35 +123,35 @@
             <div class="field-group">
                 <label for="primaryOccasion">Occasion Name:</label>
                 <div class="dropdown-search">
-                    <input type="text" id="primaryOccasion" onfocus="showFullList('primaryOccasion', occasionList)" onkeyup="filterOptions('primaryOccasion', occasionList)" required>
+                    <input type="text" id="primaryOccasion" onfocus="closeAllDropdowns(); showFullList('primaryOccasion', occasionList)" onkeyup="filterOptions('primaryOccasion', occasionList)" required>
                     <ul id="primaryOccasionOptions"></ul>
                 </div>
             </div>
             <div class="field-group">
                 <label for="primaryGotra">Gotra:</label>
                 <div class="dropdown-search">
-                    <input type="text" id="primaryGotra" onfocus="showFullList('primaryGotra', gotraList)" onkeyup="filterOptions('primaryGotra', gotraList)" required>
+                    <input type="text" id="primaryGotra" onfocus="closeAllDropdowns(); showFullList('primaryGotra', gotraList)" onkeyup="filterOptions('primaryGotra', gotraList)" required>
                     <ul id="primaryGotraOptions"></ul>
                 </div>
             </div>
             <div class="field-group">
                 <label for="primaryNakshatra">Nakshatra:</label>
                 <div class="dropdown-search">
-                    <input type="text" id="primaryNakshatra" onfocus="showFullList('primaryNakshatra', nakshatraList)" onkeyup="filterOptions('primaryNakshatra', nakshatraList)" required>
+                    <input type="text" id="primaryNakshatra" onfocus="closeAllDropdowns(); showFullList('primaryNakshatra', nakshatraList)" onkeyup="filterOptions('primaryNakshatra', nakshatraList)" required>
                     <ul id="primaryNakshatraOptions"></ul>
                 </div>
             </div>
             <div class="field-group">
                 <label for="primaryTamilMonth">Tamil Month:</label>
                 <div class="dropdown-search">
-                    <input type="text" id="primaryTamilMonth" onfocus="showFullList('primaryTamilMonth', tamilMonthList)" onkeyup="filterOptions('primaryTamilMonth', tamilMonthList)" required>
+                    <input type="text" id="primaryTamilMonth" onfocus="closeAllDropdowns(); showFullList('primaryTamilMonth', tamilMonthList)" onkeyup="filterOptions('primaryTamilMonth', tamilMonthList)" required>
                     <ul id="primaryTamilMonthOptions"></ul>
                 </div>
             </div>
             <div class="field-group">
                 <label for="primaryRashi">Rashi:</label>
                 <div class="dropdown-search">
-                    <input type="text" id="primaryRashi" onfocus="showFullList('primaryRashi', rashiList)" onkeyup="filterOptions('primaryRashi', rashiList)" required>
+                    <input type="text" id="primaryRashi" onfocus="closeAllDropdowns(); showFullList('primaryRashi', rashiList)" onkeyup="filterOptions('primaryRashi', rashiList)" required>
                     <ul id="primaryRashiOptions"></ul>
                 </div>
             </div>
@@ -181,7 +181,14 @@
         const tamilMonthList = ["Chithirai", "Vaikasi", "Aani", "Aadi", "Avani", "Purattasi", "Aippasi", "Karthigai", "Thai", "Massi", "Panguni"];
         const rashiList = ["Mesham", "Vrishabham", "Mithunam", "Katakam", "Simmham", "Kanya", "Tula", "Vrishchikam", "Dhanur", "Makaram", "Kumbham", "Meenam"];
 
+        function closeAllDropdowns(exceptId = null) {
+            document.querySelectorAll('.dropdown-search ul').forEach(ul => {
+                if (ul.id !== exceptId) ul.classList.remove('show');
+            });
+        }
+
         function showFullList(inputId, list) {
+            closeAllDropdowns(inputId + 'Options');
             const input = document.getElementById(inputId);
             const ul = document.getElementById(inputId + 'Options');
             ul.innerHTML = '';
@@ -217,7 +224,7 @@
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.dropdown-search')) {
-                document.querySelectorAll('.dropdown-search ul').forEach(ul => ul.classList.remove('show'));
+                closeAllDropdowns();
             }
         });
 
@@ -256,7 +263,7 @@
                 <div class="field-group">
                     <label for="occasion${memberNumber}">Occasion Name:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="occasion${memberNumber}" onfocus="showFullList('occasion${memberNumber}', occasionList)" onkeyup="filterOptions('occasion${memberNumber}', occasionList)" required>
+                        <input type="text" id="occasion${memberNumber}" onfocus="closeAllDropdowns(); showFullList('occasion${memberNumber}', occasionList)" onkeyup="filterOptions('occasion${memberNumber}', occasionList)" required>
                         <ul id="occasion${memberNumber}Options"></ul>
                     </div>
                 </div>
@@ -267,28 +274,28 @@
                 <div class="field-group">
                     <label for="gotra${memberNumber}">Gotra:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="gotra${memberNumber}" onfocus="showFullList('gotra${memberNumber}', gotraList)" onkeyup="filterOptions('gotra${memberNumber}', gotraList)" required>
+                        <input type="text" id="gotra${memberNumber}" onfocus="closeAllDropdowns(); showFullList('gotra${memberNumber}', gotraList)" onkeyup="filterOptions('gotra${memberNumber}', gotraList)" required>
                         <ul id="gotra${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="nakshatra${memberNumber}">Nakshatra:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="nakshatra${memberNumber}" onfocus="showFullList('nakshatra${memberNumber}', nakshatraList)" onkeyup="filterOptions('nakshatra${memberNumber}', nakshatraList)" required>
+                        <input type="text" id="nakshatra${memberNumber}" onfocus="closeAllDropdowns(); showFullList('nakshatra${memberNumber}', nakshatraList)" onkeyup="filterOptions('nakshatra${memberNumber}', nakshatraList)" required>
                         <ul id="nakshatra${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="tamilMonth${memberNumber}">Tamil Month:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="tamilMonth${memberNumber}" onfocus="showFullList('tamilMonth${memberNumber}', tamilMonthList)" onkeyup="filterOptions('tamilMonth${memberNumber}', tamilMonthList)" required>
+                        <input type="text" id="tamilMonth${memberNumber}" onfocus="closeAllDropdowns(); showFullList('tamilMonth${memberNumber}', tamilMonthList)" onkeyup="filterOptions('tamilMonth${memberNumber}', tamilMonthList)" required>
                         <ul id="tamilMonth${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="rashi${memberNumber}">Rashi:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="rashi${memberNumber}" onfocus="showFullList('rashi${memberNumber}', rashiList)" onkeyup="filterOptions('rashi${memberNumber}', rashiList)" required>
+                        <input type="text" id="rashi${memberNumber}" onfocus="closeAllDropdowns(); showFullList('rashi${memberNumber}', rashiList)" onkeyup="filterOptions('rashi${memberNumber}', rashiList)" required>
                         <ul id="rashi${memberNumber}Options"></ul>
                     </div>
                 </div>
