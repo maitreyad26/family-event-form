@@ -117,12 +117,15 @@
                 <input type="tel" id="primaryPhone" required>
             </div>
             <div class="field-group">
-                <label for="primaryOccasion">Occasion Name:</label>
-                <textarea id="primaryOccasion" required></textarea>
-            </div>
-            <div class="field-group">
                 <label for="primaryDateOfOccasion">Date of Occasion:</label>
                 <input type="date" id="primaryDateOfOccasion" required>
+            </div>
+            <div class="field-group">
+                <label for="primaryOccasion">Occasion Name:</label>
+                <div class="dropdown-search">
+                    <input type="text" id="primaryOccasion" onfocus="showFullList('primaryOccasion', occasionList)" onkeyup="filterOptions('primaryOccasion', occasionList)" required>
+                    <ul id="primaryOccasionOptions"></ul>
+                </div>
             </div>
             <div class="field-group">
                 <label for="primaryGotra">Gotra:</label>
@@ -172,6 +175,7 @@
 
     <script>
         let memberCount = 0;
+        const occasionList = ["Birthday", "Wedding Anniversary"];
         const gotraList = ["Agastya", "Atri/Atreyasa", "Alambani", "Angad", "Angirasa", "Ahabhunasa", "Aupamanyava", "Babhravya", "Bharadwaj", "Bhargava", "Bhakdi", "Bhaskara", "Chandilya", "Charora", "Chikitasa", "Chyavana", "Dalabhya", "Darbhas", "Dev", "Dhananjaya", "Dhanvantari", "Galvasaya", "Garga", "Gautamasa", "Gaubhilya", "Ghrit-Kaushika", "Harita/Haritasa", "Hukman Bhal", "Jamadagni", "Jatukarna", "Kalabodhana/Kalaboudha/Kalabhavasa", "Kamakayana Vishwamitra", "Kanva", "Kaushikasa", "Kapi", "Kapil", "Kapinjala", "Karmani", "Kashyapasa", "Kaundinyasa", "Kaunsh", "Kaushal/Kaushalas/Kushal", "Kaushik/Koshik/Koushik/Kushika", "Kaustubha", "Kausyagasa", "Kavist", "Katyayana", "Krishnatriya/Krishnatreeya", "Kundina-Gowtama", "Kusha", "Kutsa", "Kutsasa", "Lakhi", "Lohit", "Lohita-Kowshika", "Lomasha", "Mandavya", "Marichi", "Markandeya", "Mauna Bhargava", "Matanga", "Mudgala/Maudgalya/Moudgil", "Mihirayan", "Naidhruva", "Nithunthana/Naithunthasa", "Nyrdavakashyapa", "Nrisimhadevara", "Parashara", "Parthivasa", "Pouragutsya", "Punagashella", "Ratheetarasa", "Purang", "Pradnya", "Rathitara", "Rohinya", "Rauksaayana", "Saminathen", "Sanatana", "Salankayana", "Sangar", "Sanaka", "Sanaga", "Sanjaya", "Sankhyayana", "Sankrithi", "Sankyanasa", "Sathamarshana", "Shandilya", "Sanas", "Sandilyasa", "Shandelosya", "Saawrna", "Saharia Joshi", "Sauparna", "Savaran", "Savita", "Somnasser", "Pratanansya", "Saankritya/Sakarawar", "Soral", "Srivasta", "Sumarkanth", "Suryadhwaja", "Shaktri", "Shaunaka", "Sravanvaitas", "Surya", "Swatantra Kabisa", "Tugnait", "Roushayadana", "Upadhyay", "Upamanyu", "Upreti", "Vadula", "Valmiki", "Vardhviyasa", "Vardhulasa", "Vardhyswasa", "Vashishta", "Vatsa", "Vatsyayan", "Veetahavya", "Vishnuvardhana", "Vishnuvruddha", "Vartantu", "Utsasya", "Suparna", "Shiva", "Kuvera"];
         const nakshatraList = ["Ashwini", "Bharani", "Karthigai", "Rohini", "Mrigasheersham", "Thiruvaathirai", "Punarpoosam", "Poosam", "Aayilyam", "Magham", "Pooram", "Uthiram", "Hastham", "Chithirai", "Swathi", "Vishakam", "Anusham", "Kettai", "Moolam", "Pooraadam", "Uthiraadam", "Thiruvonam", "Avittam", "Sadayam", "Poorattathi", "Uthirattathi", "Revathi"];
         const tamilMonthList = ["Chithirai", "Vaikasi", "Aani", "Aadi", "Avani", "Purattasi", "Aippasi", "Karthigai", "Thai", "Massi", "Panguni"];
@@ -226,80 +230,74 @@
             }
             const familyDiv = document.getElementById('familyMembers');
             familyDiv.innerHTML = '';
-            memberCount = 0; 
-            for (let i = 0; i < count; i++) {
-                memberCount = i + 1; // Start from 1
-                addFamilyMember(false);
+            for (let i = 1; i <= count; i++) {
+                addFamilyMember(i);
             }
         }
 
-        function addFamilyMember(increment = true) {
-            if (increment) memberCount++;
+        function addFamilyMember(memberNumber) {
             const div = document.createElement('div');
             div.className = 'family-member';
             const primaryAddress = document.getElementById('primaryAddress').value;
             div.innerHTML = `
-                <h3>Member ${memberCount}</h3>
+                <h3>Member ${memberNumber}</h3>
                 <div class="field-group">
-                    <label for="name${memberCount}">Name:</label>
-                    <input type="text" id="name${memberCount}" required>
+                    <label for="name${memberNumber}">Name:</label>
+                    <input type="text" id="name${memberNumber}" required>
                 </div>
                 <div class="field-group">
-                    <label for="phone${memberCount}">Phone Number:</label>
-                    <input type="tel" id="phone${memberCount}" required>
+                    <label for="phone${memberNumber}">Phone Number:</label>
+                    <input type="tel" id="phone${memberNumber}" required>
                 </div>
                 <div class="field-group">
-                    <label for="relation${memberCount}">Relation:</label>
-                    <input type="text" id="relation${memberCount}" required>
+                    <label for="relation${memberNumber}">Relation:</label>
+                    <input type="text" id="relation${memberNumber}" required>
                 </div>
                 <div class="field-group">
-                    <label for="occasion${memberCount}">Occasion Name:</label>
-                    <textarea id="occasion${memberCount}" required></textarea>
-                </div>
-                <div class="field-group">
-                    <label for="dateOfOccasion${memberCount}">Date of Occasion:</label>
-                    <input type="date" id="dateOfOccasion${memberCount}" required>
-                </div>
-                <div class="field-group">
-                    <label for="gotra${memberCount}">Gotra:</label>
+                    <label for="occasion${memberNumber}">Occasion Name:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="gotra${memberCount}" onfocus="showFullList('gotra${memberCount}', gotraList)" onkeyup="filterOptions('gotra${memberCount}', gotraList)" required>
-                        <ul id="gotra${memberCount}Options"></ul>
+                        <input type="text" id="occasion${memberNumber}" onfocus="showFullList('occasion${memberNumber}', occasionList)" onkeyup="filterOptions('occasion${memberNumber}', occasionList)" required>
+                        <ul id="occasion${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
-                    <label for="nakshatra${memberCount}">Nakshatra:</label>
+                    <label for="dateOfOccasion${memberNumber}">Date of Occasion:</label>
+                    <input type="date" id="dateOfOccasion${memberNumber}" required>
+                </div>
+                <div class="field-group">
+                    <label for="gotra${memberNumber}">Gotra:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="nakshatra${memberCount}" onfocus="showFullList('nakshatra${memberCount}', nakshatraList)" onkeyup="filterOptions('nakshatra${memberCount}', nakshatraList)" required>
-                        <ul id="nakshatra${memberCount}Options"></ul>
+                        <input type="text" id="gotra${memberNumber}" onfocus="showFullList('gotra${memberNumber}', gotraList)" onkeyup="filterOptions('gotra${memberNumber}', gotraList)" required>
+                        <ul id="gotra${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
-                    <label for="tamilMonth${memberCount}">Tamil Month:</label>
+                    <label for="nakshatra${memberNumber}">Nakshatra:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="tamilMonth${memberCount}" onfocus="showFullList('tamilMonth${memberCount}', tamilMonthList)" onkeyup="filterOptions('tamilMonth${memberCount}', tamilMonthList)" required>
-                        <ul id="tamilMonth${memberCount}Options"></ul>
+                        <input type="text" id="nakshatra${memberNumber}" onfocus="showFullList('nakshatra${memberNumber}', nakshatraList)" onkeyup="filterOptions('nakshatra${memberNumber}', nakshatraList)" required>
+                        <ul id="nakshatra${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
-                    <label for="rashi${memberCount}">Rashi:</label>
+                    <label for="tamilMonth${memberNumber}">Tamil Month:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="rashi${memberCount}" onfocus="showFullList('rashi${memberCount}', rashiList)" onkeyup="filterOptions('rashi${memberCount}', rashiList)" required>
-                        <ul id="rashi${memberCount}Options"></ul>
+                        <input type="text" id="tamilMonth${memberNumber}" onfocus="showFullList('tamilMonth${memberNumber}', tamilMonthList)" onkeyup="filterOptions('tamilMonth${memberNumber}', tamilMonthList)" required>
+                        <ul id="tamilMonth${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
-                    <label for="address${memberCount}">Address:</label>
-                    <textarea id="address${memberCount}" value="${primaryAddress}">${primaryAddress}</textarea>
+                    <label for="rashi${memberNumber}">Rashi:</label>
+                    <div class="dropdown-search">
+                        <input type="text" id="rashi${memberNumber}" onfocus="showFullList('rashi${memberNumber}', rashiList)" onkeyup="filterOptions('rashi${memberNumber}', rashiList)" required>
+                        <ul id="rashi${memberNumber}Options"></ul>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="address${memberNumber}">Address:</label>
+                    <textarea id="address${memberNumber}" value="${primaryAddress}">${primaryAddress}</textarea>
                 </div>
             `;
             document.getElementById('familyMembers').appendChild(div);
-        }
-
-        function editAddress(memberId) {
-            const addressInput = document.getElementById(`address${memberId}`);
-            addressInput.readOnly = !addressInput.readOnly;
-            addressInput.focus();
         }
 
         document.getElementById('familyForm').addEventListener('submit', (e) => {
