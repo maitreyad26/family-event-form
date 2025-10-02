@@ -1,24 +1,25 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { createObjectCsvWriter } = require('csv-writer');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const { MongoClient } = require('mongodb');
+
 const app = express();
+const port = process.env.PORT || 10000;
 
 // Middleware
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// File paths for CSV backup
-const csvFilePath = path.join(__dirname, 'family_event_data.csv');
-const editCountsFilePath = path.join(__dirname, 'edit_counts.json');
-
-// MongoDB URI from environment
+// Configuration
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, { serverApi: { version: '1', strict: true, deprecationErrors: true } });
+const csvFilePath = path.join(__dirname, 'family_event_data.csv');
+const editCountsFilePath = path.join(__dirname, 'edit_counts.json');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminpswd6885';
 
-// CSV headers for backup
+// CSV Headers
 const csvHeaders = [
     { id: 'name', title: 'Name' },
     { id: 'occasion', title: 'Occasion Name' },
@@ -34,63 +35,70 @@ const csvHeaders = [
     { id: 'submittedAt', title: 'Submitted At' }
 ];
 
-// Initialize CSV writer for backup
+// Initialize CSV Writer
 const csvWriter = createObjectCsvWriter({
     path: csvFilePath,
     header: csvHeaders
 });
 
-// Initialize files if not exist
-if (!fs.existsSync(csvFilePath)) {
-    csvWriter.writeRecords([]).catch(err => console.error('Error creating CSV:', err));
-}
-if (!fs.existsSync(editCountsFilePath)) {
-    fs.writeFileSync(editCountsFilePath, JSON.stringify({}), 'utf8');
+// Utility Functions
+async function initializeFiles() {
+    try {
+        await fs.access(csvFilePath).catch(() => csvWriter.writeRecords([]));
+        await fs.access(editCountsFilePath).catch(() => fs.writeFile(editCountsFilePath, '{}', 'utf8'));
+    } catch (error) {
+        console.error('File initialization error:', error);
+    }
 }
 
-// Admin password from environment
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminpswd6885';
-
-// Connect to MongoDB
-async function connectDB() {
+async function getCollection() {
     try {
         await client.connect();
-        const db = client.db('family_event_db');
-        return db.collection('entries');
+        return client.db('family_event_db').collection('entries');
     } catch (error) {
         console.error('MongoDB connection error:', error);
         throw error;
     }
 }
 
-// Save form data
+async function loadEditCounts() {
+    try {
+        const data = await fs.readFile(editCountsFilePath, 'utf8');
+        return JSON.parse(data) || {};
+    } catch (error) {
+        console.error('Error reading edit counts:', error);
+        return {};
+    }
+}
+
+async function saveEditCounts(editCounts) {
+    try {
+        await fs.writeFile(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
+    } catch (error) {
+        console.error('Error saving edit counts:', error);
+    }
+}
+
+// Routes
 app.post('/save', async (req, res) => {
+    console.log('Received data:', req.body);
     try {
         const { primary = [], family = [] } = req.body || {};
-        if (!primary.length || !primary[0].email || !primary[0].name || !primary[0].phone || !primary[0].address) {
+        if (!primary.length || !primary[0]?.email || !primary[0]?.name || !primary[0]?.phone || !primary[0]?.address) {
             return res.status(400).json({ message: 'Missing required primary data (name, email, phone, or address)' });
         }
+
         const submittedAt = new Date().toISOString();
         const emailKey = primary[0].email.toLowerCase();
-
-        // Load and update edit counts
-        let editCounts = {};
-        try {
-            if (fs.existsSync(editCountsFilePath)) {
-                editCounts = JSON.parse(fs.readFileSync(editCountsFilePath, 'utf8')) || {};
-            }
-        } catch (e) {
-            console.error('Error reading edit_counts.json:', e);
-            editCounts = {}; // Reset if corrupted
-        }
+        const editCounts = await loadEditCounts();
         const editCount = editCounts[emailKey] || 0;
+
         if (editCount >= 3) {
             return res.status(400).json({ message: 'Edit limit of 3 reached' });
         }
 
-        const collection = await connectDB();
+        const collection = await getCollection();
 
-        // Prepare records for MongoDB and CSV
         const primaryRecords = primary.map(record => ({
             name: record.name || 'N/A',
             email: record.email || 'N/A',
@@ -123,7 +131,6 @@ app.post('/save', async (req, res) => {
 
         const newRecords = [...primaryRecords, ...familyRecords];
 
-        // If editCount > 0, update existing records for this email
         if (editCount > 0) {
             await collection.deleteMany({ email: emailKey });
             await collection.insertMany(newRecords, { ordered: false });
@@ -133,10 +140,8 @@ app.post('/save', async (req, res) => {
             editCounts[emailKey] = 1;
         }
 
-        // Save edit counts
-        fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
+        await saveEditCounts(editCounts);
 
-        // Sync CSV: Rewrite with all current MongoDB records
         const allRecords = await collection.find({}).toArray();
         const csvRecords = allRecords.map(record => ({
             name: record.name,
@@ -152,7 +157,7 @@ app.post('/save', async (req, res) => {
             email: record.email,
             submittedAt: record.submittedAt
         }));
-        await csvWriter.writeRecords(csvRecords).catch(err => console.error('CSV write error:', err));
+        await csvWriter.writeRecords(csvRecords);
 
         res.json({ message: 'Data saved to database and CSV successfully!' });
     } catch (error) {
@@ -161,17 +166,66 @@ app.post('/save', async (req, res) => {
     }
 });
 
-// Admin view
-app.get('/admin', async (req, res) => {
-    const password = req.query.password;
-    if (password !== ADMIN_PASSWORD) {
-        return res.status(401).send('Unauthorized');
+app.get('/edit-count/:email', async (req, res) => {
+    try {
+        const editCounts = await loadEditCounts();
+        const editCount = editCounts[req.params.email.toLowerCase()] || 0;
+        res.json({ editCount });
+    } catch (error) {
+        console.error('Edit count error:', error);
+        res.status(500).json({ message: 'Error fetching edit count' });
     }
-    const month = req.query.month;
-    const year = req.query.year;
-    let query = {};
-    let searchTitle = '';
-    if (month || year) {
+});
+
+app.post('/delete', async (req, res) => {
+    try {
+        const { password, email } = req.body || {};
+        if (!password || password !== ADMIN_PASSWORD) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const collection = await getCollection();
+        await collection.deleteMany({ email: email.toLowerCase() });
+
+        const allRecords = await collection.find({}).toArray();
+        const csvRecords = allRecords.map(record => ({
+            name: record.name,
+            occasion: record.occasion || '',
+            dateOfOccasion: record.dateOfOccasion || '',
+            gotra: record.gotra || '',
+            nakshatra: record.nakshatra || '',
+            tamilMonth: record.tamilMonth || '',
+            rashi: record.rashi || '',
+            address: record.address,
+            phone: record.phone,
+            relation: record.relation,
+            email: record.email,
+            submittedAt: record.submittedAt
+        }));
+        await csvWriter.writeRecords(csvRecords);
+
+        let editCounts = await loadEditCounts();
+        delete editCounts[email.toLowerCase()];
+        await saveEditCounts(editCounts);
+
+        res.json({ message: 'Data deleted successfully!' });
+    } catch (error) {
+        console.error('Delete error:', error);
+        res.status(500).json({ message: 'Error deleting data' });
+    }
+});
+
+app.get('/admin', async (req, res) => {
+    try {
+        const password = req.query.password;
+        if (password !== ADMIN_PASSWORD) {
+            return res.status(401).send('Unauthorized');
+        }
+
+        const month = req.query.month;
+        const year = req.query.year;
+        let query = {};
+        let searchTitle = '';
         if (month && !isNaN(month) && month >= 1 && month <= 12) {
             const paddedMonth = String(month).padStart(2, '0');
             if (year && !isNaN(year)) {
@@ -185,17 +239,14 @@ app.get('/admin', async (req, res) => {
             query.dateOfOccasion = { $regex: `^${year}-` };
             searchTitle = ` (Filtered for Year ${year})`;
         }
-    }
-    try {
-        const collection = await connectDB();
+
+        const collection = await getCollection();
         let records = await collection.find(query).toArray();
 
         records.sort((a, b) => {
             const dateA = a.dateOfOccasion ? new Date(a.dateOfOccasion) : new Date(0);
             const dateB = b.dateOfOccasion ? new Date(b.dateOfOccasion) : new Date(0);
-            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
-                return isNaN(dateA.getTime()) ? -1 : 1;
-            }
+            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return isNaN(dateA.getTime()) ? -1 : 1;
             if (dateA.getMonth() !== dateB.getMonth()) return dateA.getMonth() - dateB.getMonth();
             if (dateA.getDate() !== dateB.getDate()) return dateA.getDate() - dateB.getDate();
             if (dateA.getFullYear() !== dateB.getFullYear()) return dateA.getFullYear() - dateB.getFullYear();
@@ -243,59 +294,6 @@ app.get('/admin', async (req, res) => {
     }
 });
 
-// Edit count
-app.get('/edit-count/:email', (req, res) => {
-    try {
-        const editCounts = JSON.parse(fs.readFileSync(editCountsFilePath, 'utf8')) || {};
-        const editCount = editCounts[req.params.email.toLowerCase()] || 0;
-        res.json({ editCount });
-    } catch (error) {
-        console.error('Edit count error:', error);
-        res.status(500).json({ message: 'Error fetching edit count' });
-    }
-});
-
-// Delete by email
-app.post('/delete', async (req, res) => {
-    try {
-        const { password, email } = req.body || {};
-        if (!password || password !== ADMIN_PASSWORD) {
-            return res.status(401).json({ message: 'Unauthorized' });
-        }
-        const collection = await connectDB();
-        await collection.deleteMany({ email: email.toLowerCase() });
-
-        // Sync CSV
-        const allRecords = await collection.find({}).toArray();
-        const csvRecords = allRecords.map(record => ({
-            name: record.name,
-            occasion: record.occasion || '',
-            dateOfOccasion: record.dateOfOccasion || '',
-            gotra: record.gotra || '',
-            nakshatra: record.nakshatra || '',
-            tamilMonth: record.tamilMonth || '',
-            rashi: record.rashi || '',
-            address: record.address,
-            phone: record.phone,
-            relation: record.relation,
-            email: record.email,
-            submittedAt: record.submittedAt
-        }));
-        await csvWriter.writeRecords(csvRecords).catch(err => console.error('CSV write error:', err));
-
-        // Reset edit count
-        let editCounts = JSON.parse(fs.readFileSync(editCountsFilePath, 'utf8')) || {};
-        delete editCounts[email.toLowerCase()];
-        fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
-
-        res.json({ message: 'Data deleted successfully!' });
-    } catch (error) {
-        console.error('Delete error:', error);
-        res.status(500).json({ message: 'Error deleting data' });
-    }
-});
-
-// Download CSV
 app.get('/download-csv', (req, res) => {
     const password = req.query.password;
     if (password !== ADMIN_PASSWORD) {
@@ -309,19 +307,23 @@ app.get('/download-csv', (req, res) => {
     });
 });
 
-// Start server
-const port = process.env.PORT || 10000;
-app.listen(port, async () => {
-    console.log(`Server running on http://localhost:${port}`);
-    try {
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    } catch (error) {
-        console.error("MongoDB connection failed:", error);
-    }
-});
+// Server Start
+async function startServer() {
+    await initializeFiles();
+    app.listen(port, async () => {
+        console.log(`Server running on http://localhost:${port}`);
+        try {
+            await client.db("admin").command({ ping: 1 });
+            console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        } catch (error) {
+            console.error("MongoDB connection failed:", error);
+        }
+    });
+}
 
 process.on('SIGTERM', async () => {
     await client.close();
     process.exit(0);
 });
+
+startServer().catch(err => console.error('Server start error:', err));
