@@ -18,7 +18,7 @@ const editCountsFilePath = path.join(__dirname, 'edit_counts.json');
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, { serverApi: { version: '1', strict: true, deprecationErrors: true } });
 
-// CSV headers for backup (updated with new fields and sequence)
+// CSV headers for backup
 const csvHeaders = [
     { id: 'name', title: 'Name' },
     { id: 'occasion', title: 'Occasion Name' },
@@ -63,15 +63,15 @@ async function connectDB() {
     }
 }
 
-// Save form data (updated with new field names and sequence)
+// Save form data
 app.post('/save', async (req, res) => {
     try {
-        const { primary, family = [] } = req.body || {};
-        if (!primary || !primary.email || !primary.name) {
-            return res.status(400).json({ message: 'Missing required primary data (name or email)' });
+        const { primary = [], family = [] } = req.body || {};
+        if (!primary.length || !primary[0].email || !primary[0].name || !primary[0].phone || !primary[0].address) {
+            return res.status(400).json({ message: 'Missing required primary data (name, email, phone, or address)' });
         }
         const submittedAt = new Date().toISOString();
-        const emailKey = primary.email.toLowerCase();
+        const emailKey = primary[0].email.toLowerCase();
 
         // Load and update edit counts
         let editCounts = {};
@@ -90,43 +90,42 @@ app.post('/save', async (req, res) => {
 
         const collection = await connectDB();
 
-        // Prepare records for MongoDB and CSV (primary first)
-        const primaryRecord = {
-            name: primary.name || 'N/A',
-            email: primary.email || 'N/A',
-            phone: primary.phone || 'N/A',
-            occasion: primary.occasion || '',
-            dateOfOccasion: primary.dateOfOccasion || '',
-            gotra: primary.gotra || 'N/A',
-            nakshatra: primary.nakshatra || 'N/A',
-            tamilMonth: primary.tamilMonth || 'N/A',
-            rashi: primary.rashi || 'N/A',
-            address: primary.address || '',
-            relation: 'Self (Primary)',
+        // Prepare records for MongoDB and CSV
+        const primaryRecords = primary.map(record => ({
+            name: record.name || 'N/A',
+            email: record.email || 'N/A',
+            phone: record.phone || 'N/A',
+            occasion: record.occasion || '',
+            dateOfOccasion: record.dateOfOccasion || '',
+            gotra: record.gotra || '',
+            nakshatra: record.nakshatra || '',
+            tamilMonth: record.tamilMonth || '',
+            rashi: record.rashi || '',
+            address: record.address || 'N/A',
+            relation: record.relation || 'Self (Primary)',
             submittedAt
-        };
+        }));
 
-        // Family records (all with primary's email)
         const familyRecords = family.map((member, index) => ({
             name: member.name || 'N/A',
-            email: primary.email || 'N/A', // Use primary's email
+            email: primary[0].email || 'N/A',
             phone: member.phone || 'N/A',
             occasion: member.occasion || '',
             dateOfOccasion: member.dateOfOccasion || '',
-            gotra: member.gotra || 'N/A',
-            nakshatra: member.nakshatra || 'N/A',
-            tamilMonth: member.tamilMonth || 'N/A',
-            rashi: member.rashi || 'N/A',
-            address: member.address || primary.address || '', // Use member's address or primary's
+            gotra: member.gotra || '',
+            nakshatra: member.nakshatra || '',
+            tamilMonth: member.tamilMonth || '',
+            rashi: member.rashi || '',
+            address: member.address || primary[0].address || 'N/A',
             relation: member.relation || `Family Member ${index + 1}`,
             submittedAt
         }));
 
-        const newRecords = [primaryRecord, ...familyRecords];
+        const newRecords = [...primaryRecords, ...familyRecords];
 
         // If editCount > 0, update existing records for this email
         if (editCount > 0) {
-            await collection.deleteMany({ email: primary.email.toLowerCase() });
+            await collection.deleteMany({ email: emailKey });
             await collection.insertMany(newRecords, { ordered: false });
             editCounts[emailKey] = editCount + 1;
         } else {
@@ -137,16 +136,16 @@ app.post('/save', async (req, res) => {
         // Save edit counts
         fs.writeFileSync(editCountsFilePath, JSON.stringify(editCounts, null, 2), 'utf8');
 
-        // Sync CSV: Rewrite with all current MongoDB records (in admin sequence)
+        // Sync CSV: Rewrite with all current MongoDB records
         const allRecords = await collection.find({}).toArray();
         const csvRecords = allRecords.map(record => ({
             name: record.name,
-            occasion: record.occasion,
-            dateOfOccasion: record.dateOfOccasion,
-            gotra: record.gotra,
-            nakshatra: record.nakshatra,
-            tamilMonth: record.tamilMonth,
-            rashi: record.rashi,
+            occasion: record.occasion || '',
+            dateOfOccasion: record.dateOfOccasion || '',
+            gotra: record.gotra || '',
+            nakshatra: record.nakshatra || '',
+            tamilMonth: record.tamilMonth || '',
+            rashi: record.rashi || '',
             address: record.address,
             phone: record.phone,
             relation: record.relation,
@@ -162,7 +161,7 @@ app.post('/save', async (req, res) => {
     }
 });
 
-// Admin view (updated sequence and button text)
+// Admin view
 app.get('/admin', async (req, res) => {
     const password = req.query.password;
     if (password !== ADMIN_PASSWORD) {
@@ -172,21 +171,17 @@ app.get('/admin', async (req, res) => {
     const year = req.query.year;
     let query = {};
     let searchTitle = '';
-    // Flexible filter: month only, year only, or both (AND for both)
     if (month || year) {
         if (month && !isNaN(month) && month >= 1 && month <= 12) {
             const paddedMonth = String(month).padStart(2, '0');
             if (year && !isNaN(year)) {
-                // Both month and year: strict AND match
                 query.dateOfOccasion = { $regex: `^${year}-${paddedMonth}-` };
                 searchTitle = ` (Filtered for ${month}/${year})`;
             } else {
-                // Month only: match any year
                 query.dateOfOccasion = { $regex: `-${paddedMonth}-` };
                 searchTitle = ` (Filtered for Month ${month})`;
             }
         } else if (year && !isNaN(year)) {
-            // Year only: match any month
             query.dateOfOccasion = { $regex: `^${year}-` };
             searchTitle = ` (Filtered for Year ${year})`;
         }
@@ -195,12 +190,11 @@ app.get('/admin', async (req, res) => {
         const collection = await connectDB();
         let records = await collection.find(query).toArray();
 
-        // Custom sort: Prioritize month (Jan-Dec), then day, then year asc, then name asc if same date
         records.sort((a, b) => {
             const dateA = a.dateOfOccasion ? new Date(a.dateOfOccasion) : new Date(0);
             const dateB = b.dateOfOccasion ? new Date(b.dateOfOccasion) : new Date(0);
             if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
-                return isNaN(dateA.getTime()) ? -1 : 1; // Invalid dates to top
+                return isNaN(dateA.getTime()) ? -1 : 1;
             }
             if (dateA.getMonth() !== dateB.getMonth()) return dateA.getMonth() - dateB.getMonth();
             if (dateA.getDate() !== dateB.getDate()) return dateA.getDate() - dateB.getDate();
@@ -208,15 +202,14 @@ app.get('/admin', async (req, res) => {
             return (a.name || '').localeCompare(b.name || '');
         });
 
-        // Reorder records for admin display sequence
         const displayRecords = records.map(record => ({
             name: record.name,
-            occasion: record.occasion,
-            dateOfOccasion: record.dateOfOccasion,
-            gotra: record.gotra,
-            nakshatra: record.nakshatra,
-            tamilMonth: record.tamilMonth,
-            rashi: record.rashi,
+            occasion: record.occasion || '',
+            dateOfOccasion: record.dateOfOccasion || '',
+            gotra: record.gotra || '',
+            nakshatra: record.nakshatra || '',
+            tamilMonth: record.tamilMonth || '',
+            rashi: record.rashi || '',
             address: record.address,
             phone: record.phone,
             relation: record.relation,
@@ -262,7 +255,7 @@ app.get('/edit-count/:email', (req, res) => {
     }
 });
 
-// Delete by email (with CSV sync and edit count reset)
+// Delete by email
 app.post('/delete', async (req, res) => {
     try {
         const { password, email } = req.body || {};
@@ -272,16 +265,16 @@ app.post('/delete', async (req, res) => {
         const collection = await connectDB();
         await collection.deleteMany({ email: email.toLowerCase() });
 
-        // Sync CSV: Rewrite with remaining MongoDB records
+        // Sync CSV
         const allRecords = await collection.find({}).toArray();
         const csvRecords = allRecords.map(record => ({
             name: record.name,
-            occasion: record.occasion,
-            dateOfOccasion: record.dateOfOccasion,
-            gotra: record.gotra,
-            nakshatra: record.nakshatra,
-            tamilMonth: record.tamilMonth,
-            rashi: record.rashi,
+            occasion: record.occasion || '',
+            dateOfOccasion: record.dateOfOccasion || '',
+            gotra: record.gotra || '',
+            nakshatra: record.nakshatra || '',
+            tamilMonth: record.tamilMonth || '',
+            rashi: record.rashi || '',
             address: record.address,
             phone: record.phone,
             relation: record.relation,
@@ -302,7 +295,7 @@ app.post('/delete', async (req, res) => {
     }
 });
 
-// Download CSV (for backup verification)
+// Download CSV
 app.get('/download-csv', (req, res) => {
     const password = req.query.password;
     if (password !== ADMIN_PASSWORD) {
@@ -316,7 +309,7 @@ app.get('/download-csv', (req, res) => {
     });
 });
 
-// Start server with MongoDB connection cleanup
+// Start server
 const port = process.env.PORT || 10000;
 app.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}`);

@@ -23,7 +23,7 @@
         }
         header {
             background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
-            color: #1e3a8a;
+            color: #1e40af;
             padding: 25px 20px;
             text-align: center;
             border-bottom: 3px solid #60a5fa;
@@ -32,13 +32,11 @@
             margin: 0 0 12px;
             font-size: 1.8em;
             font-weight: 400;
-            color: #1e40af;
             line-height: 1.3;
         }
         header p {
             margin: 0;
             font-size: 1em;
-            color: #1e40af;
             line-height: 1.4;
         }
         header strong {
@@ -214,73 +212,35 @@
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
             background: #f0fdf4;
         }
+        .occasion-group {
+            padding: 15px;
+            background: #e6fffa;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #a7f3d0;
+        }
         @media (min-width: 768px) {
-            body {
-                padding: 20px;
-            }
-            .field-group {
-                flex-direction: row;
-                align-items: center;
-            }
-            .field-group label {
-                flex: 0 0 180px;
-                text-align: right;
-                margin-right: 15px;
-                margin-top: 0;
-            }
-            .field-group input,
-            .field-group textarea {
-                flex: 1;
-                max-width: none;
-            }
-            .dropdown-search ul {
-                max-width: none;
-            }
-            .container {
-                max-width: 900px;
-            }
-            header {
-                padding: 30px 25px;
-            }
-            header h1 {
-                font-size: 2em;
-            }
-            form {
-                padding: 30px 25px;
-            }
-            .family-member {
-                padding: 25px;
-            }
+            body { padding: 20px; }
+            .field-group { flex-direction: row; align-items: center; }
+            .field-group label { flex: 0 0 180px; text-align: right; margin-right: 15px; margin-top: 0; }
+            .field-group input, .field-group textarea { flex: 1; max-width: none; }
+            .dropdown-search ul { max-width: none; }
+            .container { max-width: 900px; }
+            header { padding: 30px 25px; }
+            header h1 { font-size: 2em; }
+            form { padding: 30px 25px; }
+            .family-member { padding: 25px; }
         }
         @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-            header {
-                padding: 20px 15px;
-            }
-            header h1 {
-                font-size: 1.6em;
-            }
-            form {
-                padding: 20px 15px;
-            }
-            .field-group {
-                padding: 12px;
-            }
-            .family-member {
-                padding: 15px;
-                margin-bottom: 15px;
-            }
-            .family-member h3 {
-                font-size: 1.1em;
-            }
-            input[type="number"] {
-                width: 70px;
-            }
-            .dropdown-search ul {
-                max-height: 180px;
-            }
+            body { padding: 10px; }
+            header { padding: 20px 15px; }
+            header h1 { font-size: 1.6em; }
+            form { padding: 20px 15px; }
+            .field-group { padding: 12px; }
+            .family-member { padding: 15px; margin-bottom: 15px; }
+            .family-member h3 { font-size: 1.1em; }
+            input[type="number"] { width: 70px; }
+            .dropdown-search ul { max-height: 180px; }
         }
     </style>
 </head>
@@ -310,41 +270,35 @@
                     <input type="tel" id="primaryPhone" required>
                 </div>
                 <div class="field-group">
-                    <label for="primaryDateOfOccasion">Date of Occasion:</label>
-                    <input type="date" id="primaryDateOfOccasion" required>
+                    <label for="primaryOccasionCount">No of Occasions (0-5):</label>
+                    <input type="number" id="primaryOccasionCount" min="0" max="5" value="0" oninput="updatePrimaryOccasions()">
                 </div>
-                <div class="field-group">
-                    <label for="primaryOccasion">Occasion Name:</label>
-                    <div class="dropdown-search">
-                        <input type="text" id="primaryOccasion" onfocus="closeAllDropdowns(); showFullList('primaryOccasion', occasionList)" onkeyup="filterOptions('primaryOccasion', occasionList)" required>
-                        <ul id="primaryOccasionOptions"></ul>
-                    </div>
-                </div>
+                <div id="primaryOccasions"></div>
                 <div class="field-group">
                     <label for="primaryGotra">Gotra:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="primaryGotra" onfocus="closeAllDropdowns(); showFullList('primaryGotra', gotraList)" onkeyup="filterOptions('primaryGotra', gotraList)" required>
+                        <input type="text" id="primaryGotra" onfocus="closeAllDropdowns(); showFullList('primaryGotra', gotraList)" onkeyup="filterOptions('primaryGotra', gotraList)">
                         <ul id="primaryGotraOptions"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="primaryNakshatra">Nakshatra:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="primaryNakshatra" onfocus="closeAllDropdowns(); showFullList('primaryNakshatra', nakshatraList)" onkeyup="filterOptions('primaryNakshatra', nakshatraList)" required>
+                        <input type="text" id="primaryNakshatra" onfocus="closeAllDropdowns(); showFullList('primaryNakshatra', nakshatraList)" onkeyup="filterOptions('primaryNakshatra', nakshatraList)">
                         <ul id="primaryNakshatraOptions"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="primaryTamilMonth">Tamil Month:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="primaryTamilMonth" onfocus="closeAllDropdowns(); showFullList('primaryTamilMonth', tamilMonthList)" onkeyup="filterOptions('primaryTamilMonth', tamilMonthList)" required>
+                        <input type="text" id="primaryTamilMonth" onfocus="closeAllDropdowns(); showFullList('primaryTamilMonth', tamilMonthList)" onkeyup="filterOptions('primaryTamilMonth', tamilMonthList)">
                         <ul id="primaryTamilMonthOptions"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="primaryRashi">Rashi:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="primaryRashi" onfocus="closeAllDropdowns(); showFullList('primaryRashi', rashiList)" onkeyup="filterOptions('primaryRashi', rashiList)" required>
+                        <input type="text" id="primaryRashi" onfocus="closeAllDropdowns(); showFullList('primaryRashi', rashiList)" onkeyup="filterOptions('primaryRashi', rashiList)">
                         <ul id="primaryRashiOptions"></ul>
                     </div>
                 </div>
@@ -422,6 +376,40 @@
             }
         });
 
+        function updatePrimaryOccasions() {
+            const count = parseInt(document.getElementById('primaryOccasionCount').value) || 0;
+            if (count > 5) {
+                alert('Max 5 occasions per person');
+                document.getElementById('primaryOccasionCount').value = 5;
+                return;
+            }
+            const occasionDiv = document.getElementById('primaryOccasions');
+            occasionDiv.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                addPrimaryOccasion(i);
+            }
+        }
+
+        function addPrimaryOccasion(occasionNumber) {
+            const div = document.createElement('div');
+            div.className = 'occasion-group';
+            div.innerHTML = `
+                <h4>Occasion ${occasionNumber}</h4>
+                <div class="field-group">
+                    <label for="primaryOccasion${occasionNumber}">Occasion Name:</label>
+                    <div class="dropdown-search">
+                        <input type="text" id="primaryOccasion${occasionNumber}" onfocus="closeAllDropdowns(); showFullList('primaryOccasion${occasionNumber}', occasionList)" onkeyup="filterOptions('primaryOccasion${occasionNumber}', occasionList)">
+                        <ul id="primaryOccasion${occasionNumber}Options"></ul>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="primaryDateOfOccasion${occasionNumber}">Date of Occasion:</label>
+                    <input type="date" id="primaryDateOfOccasion${occasionNumber}">
+                </div>
+            `;
+            document.getElementById('primaryOccasions').appendChild(div);
+        }
+
         function updateFamilyForms() {
             const count = parseInt(document.getElementById('familyMemberCount').value) || 0;
             if (count > 12) {
@@ -453,44 +441,38 @@
                 </div>
                 <div class="field-group">
                     <label for="relation${memberNumber}">Relation:</label>
-                    <input type="text" id="relation${memberNumber}" required>
+                    <input type="text" id="relation${memberNumber}">
                 </div>
                 <div class="field-group">
-                    <label for="occasion${memberNumber}">Occasion Name:</label>
-                    <div class="dropdown-search">
-                        <input type="text" id="occasion${memberNumber}" onfocus="closeAllDropdowns(); showFullList('occasion${memberNumber}', occasionList)" onkeyup="filterOptions('occasion${memberNumber}', occasionList)" required>
-                        <ul id="occasion${memberNumber}Options"></ul>
-                    </div>
+                    <label for="occasionCount${memberNumber}">No of Occasions (0-5):</label>
+                    <input type="number" id="occasionCount${memberNumber}" min="0" max="5" value="0" oninput="updateFamilyOccasions(${memberNumber})">
                 </div>
-                <div class="field-group">
-                    <label for="dateOfOccasion${memberNumber}">Date of Occasion:</label>
-                    <input type="date" id="dateOfOccasion${memberNumber}" required>
-                </div>
+                <div id="occasions${memberNumber}"></div>
                 <div class="field-group">
                     <label for="gotra${memberNumber}">Gotra:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="gotra${memberNumber}" onfocus="closeAllDropdowns(); showFullList('gotra${memberNumber}', gotraList)" onkeyup="filterOptions('gotra${memberNumber}', gotraList)" required>
+                        <input type="text" id="gotra${memberNumber}" onfocus="closeAllDropdowns(); showFullList('gotra${memberNumber}', gotraList)" onkeyup="filterOptions('gotra${memberNumber}', gotraList)">
                         <ul id="gotra${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="nakshatra${memberNumber}">Nakshatra:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="nakshatra${memberNumber}" onfocus="closeAllDropdowns(); showFullList('nakshatra${memberNumber}', nakshatraList)" onkeyup="filterOptions('nakshatra${memberNumber}', nakshatraList)" required>
+                        <input type="text" id="nakshatra${memberNumber}" onfocus="closeAllDropdowns(); showFullList('nakshatra${memberNumber}', nakshatraList)" onkeyup="filterOptions('nakshatra${memberNumber}', nakshatraList)">
                         <ul id="nakshatra${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="tamilMonth${memberNumber}">Tamil Month:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="tamilMonth${memberNumber}" onfocus="closeAllDropdowns(); showFullList('tamilMonth${memberNumber}', tamilMonthList)" onkeyup="filterOptions('tamilMonth${memberNumber}', tamilMonthList)" required>
+                        <input type="text" id="tamilMonth${memberNumber}" onfocus="closeAllDropdowns(); showFullList('tamilMonth${memberNumber}', tamilMonthList)" onkeyup="filterOptions('tamilMonth${memberNumber}', tamilMonthList)">
                         <ul id="tamilMonth${memberNumber}Options"></ul>
                     </div>
                 </div>
                 <div class="field-group">
                     <label for="rashi${memberNumber}">Rashi:</label>
                     <div class="dropdown-search">
-                        <input type="text" id="rashi${memberNumber}" onfocus="closeAllDropdowns(); showFullList('rashi${memberNumber}', rashiList)" onkeyup="filterOptions('rashi${memberNumber}', rashiList)" required>
+                        <input type="text" id="rashi${memberNumber}" onfocus="closeAllDropdowns(); showFullList('rashi${memberNumber}', rashiList)" onkeyup="filterOptions('rashi${memberNumber}', rashiList)">
                         <ul id="rashi${memberNumber}Options"></ul>
                     </div>
                 </div>
@@ -502,43 +484,119 @@
             document.getElementById('familyMembers').appendChild(div);
         }
 
+        function updateFamilyOccasions(memberNumber) {
+            const count = parseInt(document.getElementById(`occasionCount${memberNumber}`).value) || 0;
+            if (count > 5) {
+                alert('Max 5 occasions per person');
+                document.getElementById(`occasionCount${memberNumber}`).value = 5;
+                return;
+            }
+            const occasionDiv = document.getElementById(`occasions${memberNumber}`);
+            occasionDiv.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                addFamilyOccasion(memberNumber, i);
+            }
+        }
+
+        function addFamilyOccasion(memberNumber, occasionNumber) {
+            const div = document.createElement('div');
+            div.className = 'occasion-group';
+            div.innerHTML = `
+                <h4>Occasion ${occasionNumber}</h4>
+                <div class="field-group">
+                    <label for="occasion${memberNumber}_${occasionNumber}">Occasion Name:</label>
+                    <div class="dropdown-search">
+                        <input type="text" id="occasion${memberNumber}_${occasionNumber}" onfocus="closeAllDropdowns(); showFullList('occasion${memberNumber}_${occasionNumber}', occasionList)" onkeyup="filterOptions('occasion${memberNumber}_${occasionNumber}', occasionList)">
+                        <ul id="occasion${memberNumber}_${occasionNumber}Options"></ul>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="dateOfOccasion${memberNumber}_${occasionNumber}">Date of Occasion:</label>
+                    <input type="date" id="dateOfOccasion${memberNumber}_${occasionNumber}">
+                </div>
+            `;
+            document.getElementById(`occasions${memberNumber}`).appendChild(div);
+        }
+
         document.getElementById('familyForm').addEventListener('submit', (e) => {
             e.preventDefault();
+            const primaryOccasionCount = parseInt(document.getElementById('primaryOccasionCount').value) || 0;
             const primary = {
                 name: document.getElementById('primaryName').value,
                 email: document.getElementById('primaryEmail').value,
                 phone: document.getElementById('primaryPhone').value,
-                occasion: document.getElementById('primaryOccasion').value,
-                dateOfOccasion: document.getElementById('primaryDateOfOccasion').value,
-                gotra: document.getElementById('primaryGotra').value,
-                nakshatra: document.getElementById('primaryNakshatra').value,
-                tamilMonth: document.getElementById('primaryTamilMonth').value,
-                rashi: document.getElementById('primaryRashi').value,
-                address: document.getElementById('primaryAddress').value
+                address: document.getElementById('primaryAddress').value,
+                gotra: document.getElementById('primaryGotra').value || '',
+                nakshatra: document.getElementById('primaryNakshatra').value || '',
+                tamilMonth: document.getElementById('primaryTamilMonth').value || '',
+                rashi: document.getElementById('primaryRashi').value || ''
             };
+            // Collect primary occasions as separate records
+            const primaryRecords = [];
+            if (primaryOccasionCount > 0) {
+                for (let i = 1; i <= primaryOccasionCount; i++) {
+                    const occasion = document.getElementById(`primaryOccasion${i}`).value || '';
+                    const dateOfOccasion = document.getElementById(`primaryDateOfOccasion${i}`).value || '';
+                    primaryRecords.push({
+                        ...primary,
+                        occasion,
+                        dateOfOccasion,
+                        relation: 'Self (Primary)'
+                    });
+                }
+            } else {
+                primaryRecords.push({
+                    ...primary,
+                    occasion: '',
+                    dateOfOccasion: '',
+                    relation: 'Self (Primary)'
+                });
+            }
+
             const family = [];
             for (let i = 1; i <= memberCount; i++) {
-                family.push({
+                const occasionCount = parseInt(document.getElementById(`occasionCount${i}`).value) || 0;
+                const member = {
                     name: document.getElementById(`name${i}`).value,
                     phone: document.getElementById(`phone${i}`).value,
-                    relation: document.getElementById(`relation${i}`).value,
-                    occasion: document.getElementById(`occasion${i}`).value,
-                    dateOfOccasion: document.getElementById(`dateOfOccasion${i}`).value,
-                    gotra: document.getElementById(`gotra${i}`).value,
-                    nakshatra: document.getElementById(`nakshatra${i}`).value,
-                    tamilMonth: document.getElementById(`tamilMonth${i}`).value,
-                    rashi: document.getElementById(`rashi${i}`).value,
-                    address: document.getElementById(`address${i}`).value
-                });
+                    address: document.getElementById(`address${i}`).value,
+                    relation: document.getElementById(`relation${i}`).value || `Family Member ${i}`,
+                    gotra: document.getElementById(`gotra${i}`).value || '',
+                    nakshatra: document.getElementById(`nakshatra${i}`).value || '',
+                    tamilMonth: document.getElementById(`tamilMonth${i}`).value || '',
+                    rashi: document.getElementById(`rashi${i}`).value || '',
+                    email: primary.email // Use primary email for family
+                };
+                if (occasionCount > 0) {
+                    for (let j = 1; j <= occasionCount; j++) {
+                        const occasion = document.getElementById(`occasion${i}_${j}`).value || '';
+                        const dateOfOccasion = document.getElementById(`dateOfOccasion${i}_${j}`).value || '';
+                        family.push({
+                            ...member,
+                            occasion,
+                            dateOfOccasion
+                        });
+                    }
+                } else {
+                    family.push({
+                        ...member,
+                        occasion: '',
+                        dateOfOccasion: ''
+                    });
+                }
             }
             const familyMemberCount = parseInt(document.getElementById('familyMemberCount').value) || 0;
 
-            if (!primary.email.includes('@') || !primary.dateOfOccasion) {
-                alert('Invalid email or date');
+            if (!primary.email.includes('@')) {
+                alert('Invalid email');
                 return;
             }
             if (familyMemberCount > 12 || family.length !== familyMemberCount) {
                 alert('Invalid family member count');
+                return;
+            }
+            if (primaryOccasionCount > 5 || family.some(m => parseInt(document.getElementById(`occasionCount${family.indexOf(m) + 1}`).value) > 5)) {
+                alert('Max 5 occasions per person');
                 return;
             }
 
@@ -552,13 +610,19 @@
                     fetch('/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ primary, family, familyMemberCount })
+                        body: JSON.stringify({ primary: primaryRecords, family })
                     }).then(r => r.json()).then(d => {
-                        alert('Your response has been submitted!');
-                        document.getElementById('familyForm').reset();
-                        document.getElementById('familyMembers').innerHTML = '';
-                        document.getElementById('familyMemberCount').value = 0;
-                        memberCount = 0;
+                        if (d.message.includes('Error')) {
+                            alert(d.message);
+                        } else {
+                            alert('Your response has been submitted!');
+                            document.getElementById('familyForm').reset();
+                            document.getElementById('primaryOccasions').innerHTML = '';
+                            document.getElementById('familyMembers').innerHTML = '';
+                            document.getElementById('familyMemberCount').value = 0;
+                            document.getElementById('primaryOccasionCount').value = 0;
+                            memberCount = 0;
+                        }
                     }).catch(e => {
                         console.error('Submit error:', e);
                         alert('Error saving');
