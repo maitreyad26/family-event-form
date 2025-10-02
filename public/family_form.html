@@ -591,11 +591,14 @@
                 alert('Invalid email');
                 return;
             }
-            if (familyMemberCount > 12 || family.length !== familyMemberCount) {
+            if (familyMemberCount > 12 || memberCount !== familyMemberCount) {
                 alert('Invalid family member count');
                 return;
             }
-            if (primaryOccasionCount > 5 || family.some(m => parseInt(document.getElementById(`occasionCount${family.indexOf(m) + 1}`).value) > 5)) {
+            if (primaryOccasionCount > 5 || family.some((_, idx) => {
+                const m = Math.floor(idx / 5) + 1; // Approximate member index
+                return parseInt(document.getElementById(`occasionCount${m}`).value) > 5;
+            })) {
                 alert('Max 5 occasions per person');
                 return;
             }
